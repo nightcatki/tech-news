@@ -1,0 +1,366 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>科技晨报</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0f172a; --card:#1e293b; --card2:#273549; --text:#e2e8f0;
+  --muted:#94a3b8; --accent:#38bdf8; --policy:#78350f; --policy-bg:#292018;
+  --line:#334155;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif;
+  max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:70px;overflow-x:hidden}
+header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(10px);
+  z-index:10;padding:12px 16px;border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:18px;font-weight:700}
+.date-nav{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.date-nav button{background:none;border:none;color:var(--accent);font-size:16px;padding:4px 8px;cursor:pointer}
+.date-nav button:disabled{color:var(--line)}
+/* 晨报 */
+.digest{margin:14px 16px;padding:14px 16px;background:linear-gradient(135deg,#1e3a5f,#1e293b);
+  border:1px solid #2563eb44;border-radius:14px;font-size:14px;line-height:1.7}
+.digest .tag{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:1px;display:block;margin-bottom:6px}
+/* 政策专区 */
+.policy-sec{margin:0 16px 14px}
+.policy-sec h2{font-size:13px;color:#fbbf24;margin-bottom:8px;letter-spacing:1px}
+.policy-card{background:var(--policy-bg);border:1px solid #92400e55;border-left:3px solid #f59e0b;
+  border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.policy-card .p-title{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:6px}
+.policy-card .p-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.policy-card .p-row{font-size:13px;line-height:1.6;color:#d6cfc4;margin-top:4px}
+.policy-card .p-row b{color:#fbbf24;font-weight:600}
+.policy-card a{color:var(--accent);font-size:12px;text-decoration:none}
+/* 板块 Tab */
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 12px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:var(--card);
+  color:var(--muted);border:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.tab.active{background:var(--accent);color:#0f172a;font-weight:600;border-color:var(--accent)}
+/* 新闻卡片 */
+.feed{padding:0 16px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+  transition:transform .15s;min-width:0}
+.card h3,.card .c-sum{overflow-wrap:anywhere;word-break:break-word}
+.card.top{border-color:#38bdf866;background:linear-gradient(135deg,#16405e33,var(--card))}
+.card .c-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0}
+.badge.ai{background:#0ea5e933;color:#7dd3fc}
+.badge.\33 dgs{background:#a855f733;color:#d8b4fe}
+.badge.embodied{background:#22c55e33;color:#86efac}
+.badge.company{background:#f9731633;color:#fdba74}
+.score{margin-left:auto;font-size:11px;color:var(--muted)}
+.score.hot{color:#f87171;font-weight:700}
+.card h3{font-size:15px;line-height:1.5;margin-bottom:6px}
+.card h3 .orig{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:3px}
+.card .c-sum{font-size:13px;color:#b8c2d0;line-height:1.7;margin-bottom:10px}
+.card .c-foot{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)}
+.card .c-actions{display:flex;gap:6px}
+.btn{font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-block}
+.btn.primary{background:var(--accent);color:#0f172a;border-color:var(--accent);font-weight:600}
+.btn.faved{background:#f59e0b33;color:#fbbf24;border-color:#f59e0b}
+.empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
+/* 底部导航 */
+nav{position:fixed;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;
+  background:rgba(15,23,42,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  display:flex;z-index:10}
+nav a{flex:1;text-align:center;padding:12px 0 calc(12px + env(safe-area-inset-bottom));
+  font-size:12px;color:var(--muted);text-decoration:none}
+nav a.active{color:var(--accent);font-weight:600}
+.updated{text-align:center;font-size:11px;color:#475569;padding:16px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <h1>科技晨报</h1>
+    <div class="date-nav">
+      <button id="prevDay" aria-label="前一天">‹</button>
+      <span id="dateLabel">今天</span>
+      <button id="nextDay" disabled aria-label="后一天">›</button>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+  <div class="empty">加载中…</div>
+</main>
+
+<nav>
+  <a href="#" class="active" data-view="feed">今日</a>
+  <a href="#" data-view="fav">收藏</a>
+  <a href="#" data-view="about">我的</a>
+</nav>
+
+<script>
+const $ = s => document.querySelector(s);
+const state = { data:null, dates:[], dateIdx:0, tab:'all', view:'feed',
+  favs: JSON.parse(localStorage.getItem('favs')||'[]') };
+
+const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company' };
+
+async function init(){
+  try{
+    state.dates = await fetch('data/index.json').then(r=>r.json()).catch(()=>[]);
+    await loadDate(state.dates.at(-1) || 'latest');
+  }catch(e){
+    $('#app').innerHTML = '<div class="empty">数据加载失败，请稍后重试</div>';
+  }
+  bindNav();
+}
+
+async function loadDate(date){
+  const file = date === 'latest' ? 'latest' : date;
+  state.data = await fetch(`data/${file}.json`).then(r=>r.json());
+  state.dateIdx = Math.max(0, state.dates.indexOf(date));
+  // 应用已缓存的翻译
+  const cache = getCache();
+  for(const it of state.data.items){
+    if(!it.ai && cache[it.id]) Object.assign(it, cache[it.id], {ai:true});
+  }
+  render();
+  translatePending();  // 有 Key 时后台自动补翻
+}
+
+function fmtDate(d){
+  const today = new Date().toISOString().slice(0,10);
+  if(d === today) return '今天 ' + d.slice(5);
+  return d.slice(5).replace('-','/');
+}
+
+function render(){
+  const d = state.data;
+  $('#dateLabel').textContent = fmtDate(d.date);
+  $('#prevDay').disabled = state.dateIdx <= 0;
+  $('#nextDay').disabled = state.dateIdx >= state.dates.length - 1;
+
+  if(state.view === 'fav') return renderFavs();
+  if(state.view === 'about') return renderAbout();
+
+  const boards = d.boards || {};
+  const tabs = ['all', ...Object.keys(boards)];
+  let items = state.tab === 'all' ? d.items : d.items.filter(i=>i.board===state.tab);
+  const tops = state.tab === 'all' ? d.items.slice(0,3).map(i=>i.id) : [];
+
+  let html = `<div class="digest"><span class="tag">AI 晨报</span>${d.digest}</div>`;
+
+  if(d.policies && d.policies.length){
+    html += `<div class="policy-sec"><h2>上周政策速递</h2>` +
+      d.policies.map(p=>`
+        <div class="policy-card">
+          <div class="p-title">${p.title}</div>
+          <div class="p-meta">${p.source}</div>
+          ${p.what?`<div class="p-row"><b>说什么</b>｜${p.what}</div>`:''}
+          ${p.meaning?`<div class="p-row"><b>意味着什么</b>｜${p.meaning}</div>`:''}
+          <a href="${p.link}" target="_blank">查看原文 →</a>
+        </div>`).join('') + `</div>`;
+  }
+
+  html += `<div class="tabs">` + tabs.map(t=>
+    `<div class="tab ${state.tab===t?'active':''}" data-tab="${t}">${t==='all'?'全部':boards[t]}</div>`
+  ).join('') + `</div><div class="feed">`;
+
+  if(!items.length){
+    html += `<div class="empty">该板块今天暂无更新</div>`;
+  }
+  html += items.map(it=>{
+    const isTop = tops.includes(it.id);
+    const faved = state.favs.includes(it.id);
+    const isZh = it.lang === 'zh' || it.title === it.title_zh;
+    return `
+    <div class="card ${isTop?'top':''}">
+      <div class="c-head">
+        <span class="badge ${BOARD_CLASS[it.board]||'ai'}">${boards[it.board]||it.board}</span>
+        <span style="font-size:11px;color:var(--muted)">${it.source}</span>
+        <span class="score ${it.score>=8?'hot':''}">${isTop?'置顶':''}${it.score>=8?' '+it.score+'分':''}</span>
+      </div>
+      <h3 id="t-${it.id}">${it.title_zh}${isZh?'':`<span class="orig">${it.title}</span>`}</h3>
+      <div class="c-sum" id="s-${it.id}">${it.summary}</div>
+      <div class="c-foot">
+        <span>${(it.published||'').slice(5,16).replace('T',' ')}</span>
+        <div class="c-actions">
+          <button class="btn ${faved?'faved':''}" data-fav="${it.id}">${faved?'★ 已收藏':'☆ 收藏'}</button>
+          <a class="btn primary" href="${it.link}" target="_blank">读原文</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `</div>
+  <div class="updated">生成于 ${(d.generated_at||'').slice(5,16).replace('T',' ')} ｜ 共 ${d.items.length} 条</div>`;
+
+  $('#app').innerHTML = html;
+  bindCards();
+}
+
+function renderFavs(){
+  const d = state.data;
+  const favItems = (d.items||[]).filter(i=>state.favs.includes(i.id));
+  $('#app').innerHTML = `<div class="feed" style="padding-top:14px">` +
+    (favItems.length ? '' : '<div class="empty">还没有收藏，右滑或点「☆ 收藏」试试</div>') +
+    favItems.map(it=>`
+      <div class="card"><h3>${it.title_zh}</h3>
+      <div class="c-sum">${it.summary}</div>
+      <div class="c-foot"><span>${it.source}</span>
+      <a class="btn primary" href="${it.link}" target="_blank">读原文</a></div></div>`).join('')
+    + `</div>`;
+}
+
+function renderAbout(){
+  const key = getKey();
+  $('#app').innerHTML = `<div style="padding:24px 20px;font-size:14px;line-height:2">
+    <h2 style="font-size:16px;margin-bottom:12px">我的</h2>
+
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;
+         padding:16px;margin-bottom:18px">
+      <div style="font-weight:600;margin-bottom:4px">DeepSeek 翻译 Key</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">
+        填入 OpenRouter 免费 Key 后，打开 App 会自动把未翻译的新闻转成中文摘要。<br>
+        免费获取：<a href="https://openrouter.ai/keys" target="_blank"
+        style="color:var(--accent)">openrouter.ai/keys</a>（注册即得，无需付费）
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="keyInput" type="password" placeholder="sk-or-v1-..." value="${key}"
+          style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-size:13px;outline:none;min-width:0">
+        <button id="saveKey" class="btn primary" style="flex-shrink:0">保存</button>
+      </div>
+      <div id="keyStatus" style="font-size:12px;margin-top:8px;color:${key?'#4ade80':'var(--muted)'}">
+        ${key ? '已配置，刷新页面后自动翻译' : '未配置 · 当前显示英文原文'}</div>
+      ${key?'<div id="clearKey" style="font-size:12px;color:#f87171;margin-top:6px;cursor:pointer">清除 Key</div>':''}
+    </div>
+
+    <h2 style="font-size:16px;margin-bottom:12px">关于</h2>
+    <p>每天 07:00 自动抓取全球科技一手新闻，<br>每周一加更「上周政策速递」。<br><br>
+    关注板块：AI 大模型 · 3DGS · 具身智能 · 产品与公司</p>
+    <p style="color:var(--muted);font-size:12px;margin-top:16px">
+    历史存档 ${state.dates.length} 天 ｜ 数据源均为一手官方渠道</p></div>`;
+
+  $('#saveKey').onclick = ()=>{
+    const v = $('#keyInput').value.trim();
+    if(!v) return;
+    localStorage.setItem('or_key', v);
+    renderAbout();
+    translatePending();  // 保存后立即开始翻译
+  };
+  const clr = $('#clearKey');
+  if(clr) clr.onclick = ()=>{
+    localStorage.removeItem('or_key');
+    localStorage.removeItem('trans_cache');
+    renderAbout();
+  };
+}
+
+/* ---------- 浏览器端 DeepSeek 翻译 ---------- */
+const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OR_MODEL = 'deepseek/deepseek-chat-v3.1:free';
+const getKey = ()=> localStorage.getItem('or_key') || '';
+const getCache = ()=> JSON.parse(localStorage.getItem('trans_cache')||'{}');
+const setCache = c => localStorage.setItem('trans_cache', JSON.stringify(c));
+
+async function orChat(prompt){
+  const r = await fetch(OR_URL, {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+getKey(), 'Content-Type':'application/json' },
+    body: JSON.stringify({ model:OR_MODEL, temperature:0.3,
+      messages:[{role:'user', content:prompt}] })
+  });
+  if(r.status === 429) throw new Error('rate_limit');
+  if(!r.ok) throw new Error('http_'+r.status);
+  return (await r.json()).choices[0].message.content;
+}
+
+function translatePrompt(it){
+  return `你是科技新闻编辑。处理下面这条新闻，输出严格 JSON（不要 markdown 代码块）：
+{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能的读者，只填数字）}
+
+标题：${it.title}
+来源：${it.source}
+摘要：${(it.summary_raw||'').slice(0,400)}`;
+}
+
+/* 翻译当前日期下所有未处理的条目，逐条更新界面 */
+async function translatePending(){
+  if(!getKey() || !state.data) return;
+  const cache = getCache();
+  const pending = state.data.items.filter(it => !it.ai && !cache[it.id]);
+  if(!pending.length) return;
+  showToast(`正在用 DeepSeek 翻译 ${pending.length} 条新闻…`);
+  let done = 0;
+  for(const it of pending){
+    try{
+      const resp = await orChat(translatePrompt(it));
+      const m = resp.match(/\{[\s\S]*\}/);
+      if(m){
+        const r = JSON.parse(m[0]);
+        cache[it.id] = { title_zh:r.title_zh||it.title, summary:r.summary||'', score:+r.score||5 };
+        setCache(cache);
+        applyTranslation(it, cache[it.id]);
+      }
+    }catch(e){
+      showToast(e.message==='rate_limit' ? '免费额度限速中，稍后再打开会自动继续' : '翻译失败：'+e.message);
+      break;
+    }
+    if(++done % 5 === 0) showToast(`已翻译 ${done}/${pending.length} 条…`);
+    await new Promise(r=>setTimeout(r, 2500));  // 免费档限速保护
+  }
+  if(done === pending.length) showToast('全部翻译完成');
+}
+
+/* 把翻译结果应用到数据和界面 */
+function applyTranslation(it, t){
+  Object.assign(it, t, {ai:true});
+  const h = document.getElementById('t-'+it.id);
+  const s = document.getElementById('s-'+it.id);
+  if(h) h.innerHTML = `${it.title_zh}<span class="orig">${it.title}</span>`;
+  if(s) s.textContent = it.summary;
+}
+
+function showToast(msg){
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div'); t.id = 'toast';
+    t.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);' +
+      'background:#1e293b;border:1px solid var(--accent);color:var(--text);font-size:13px;' +
+      'padding:8px 16px;border-radius:20px;z-index:99;box-shadow:0 4px 20px #0008';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(()=>t.style.display='none', 3000);
+}
+
+function bindCards(){
+  document.querySelectorAll('.tab').forEach(t=>t.onclick = ()=>{
+    state.tab = t.dataset.tab; render();
+  });
+  document.querySelectorAll('[data-fav]').forEach(b=>b.onclick = ()=>{
+    const id = b.dataset.fav;
+    const i = state.favs.indexOf(id);
+    i >= 0 ? state.favs.splice(i,1) : state.favs.push(id);
+    localStorage.setItem('favs', JSON.stringify(state.favs));
+    render();
+  });
+}
+
+function bindNav(){
+  document.querySelectorAll('nav a').forEach(a=>a.onclick = e=>{
+    e.preventDefault();
+    document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    state.view = a.dataset.view; render();
+  });
+  $('#prevDay').onclick = ()=>{ if(state.dateIdx>0) loadDate(state.dates[state.dateIdx-1]); };
+  $('#nextDay').onclick = ()=>{ if(state.dateIdx<state.dates.length-1) loadDate(state.dates[state.dateIdx+1]); };
+}
+
+init();
+</script>
+</body>
+</html>
+
