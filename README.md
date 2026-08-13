@@ -1,32 +1,23 @@
-# ⚡ 科技晨报 · 每日科技一手新闻工作台
+# 科技晨报
 
-移动优先的科技新闻 PWA，用于展示每日科技一手新闻、中文摘要与政策速递。
+移动优先的科技新闻 PWA，用于每天展示一手科技新闻。可在手机浏览器中添加到主屏幕使用。
 
-关注板块：**AI 大模型 · 3DGS / 三维重建 · 具身智能 · 产品与公司**
+关注板块：AI 大模型、3DGS、具身智能、产品与公司。
 
-## 当前项目结构
+## 项目结构
 
+```text
+index.html          # 移动端 PWA 单页应用
+manifest.json       # 添加到手机主屏幕所需配置
+icon.svg            # PWA 图标
+scripts/            # 每日新闻 JSON 生成脚本
+data/               # 前端读取的新闻 JSON
+.github/workflows/  # GitHub Actions 自动生成与部署
 ```
-├── index.html          # 移动端 PWA 单页应用
-├── manifest.json       # 添加到手机主屏幕所需配置
-├── icon.svg            # PWA 图标
-├── scripts/            # 每日新闻 JSON 生成脚本
-├── data/               # 前端读取的新闻 JSON
-└── .github/workflows/  # GitHub Pages 自动发布
-```
-
-## 部署步骤（约 10 分钟）
-
-1. **推送本仓库到 GitHub**（私有仓库即可）
-2. **开启 Pages**：仓库 Settings → Pages → Source 选 GitHub Actions
-3. **等待部署**：Actions → Deploy static site 运行成功
-4. **手机访问** `https://<用户名>.github.io/<仓库名>/` → 浏览器菜单「添加到主屏幕」→ 当 App 用
-
-后续接入抓取流水线后，只要持续写入 `data/` 目录，前端会自动展示最新数据。
 
 ## 每日自动更新
 
-已配置 `.github/workflows/daily-news.yml`：
+`.github/workflows/daily-news.yml` 已配置：
 
 - 每天北京时间 07:00 自动运行
 - 抓取 RSS/Atom 新闻源
@@ -36,29 +27,33 @@
 - 自动提交到 `main`
 - 自动重新部署 GitHub Pages
 
-手动测试：仓库 → Actions → Generate daily news → Run workflow。
+手动运行：仓库 → Actions → Generate daily news → Run workflow。
 
-当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。配置 OpenRouter Key 后，GitHub Actions 会用 `openrouter/free` 免费模型路由生成中文标题和摘要。
+## 手机端翻译
 
-配置方式：仓库 → Settings → Secrets and variables → Actions → New repository secret，Name 填 `OPENROUTER_API_KEY`，Secret 粘贴 OpenRouter API Key。也可以在手机端“我的”里填 OpenRouter Key，让浏览器打开时自动补中文摘要。
+当前网页使用“手动逐条翻译”：
+
+1. 打开网页底部“我的”
+2. 选择 DeepSeek 官方 API 或智谱 GLM 官方 API
+3. 填入 API Key 并保存
+4. 回到“今日”，点击每张新闻卡片底部的“翻译”
+
+Key 只保存在当前浏览器本地。翻译成功后会缓存到本地，重复打开不会再次调用。
 
 ## 本地调试
-
-本地预览：
 
 ```bash
 python scripts/generate_news.py
 python -m http.server 8080
-# 手机与电脑同一局域网时，访问 http://<电脑IP>:8080
 ```
+
+手机和电脑在同一局域网时，可访问 `http://<电脑IP>:8080` 预览。
 
 ## 路线图
 
-- [x] V1：移动 PWA + GitHub Pages 发布
+- [x] 移动端 PWA + GitHub Pages 发布
 - [x] 四板块抓取 + 定时数据生成
-- [x] GitHub Actions 端 OpenRouter 免费模型中文摘要
-- [ ] 每周政策流水线（国家级 + 浙江/上海）
-- [ ] 机器之心、36氪等失效 RSS 改用 HTML 抓取
-- [ ] 浏览器 Web Push 晨报推送
+- [x] 手机端 DeepSeek / 智谱官方 API 手动逐条翻译
+- [ ] 每周政策流水线
+- [ ] 浏览器 Web Push 晨报提醒
 - [ ] 收藏行为训练推荐排序
-- [ ] 微信小程序包装（需企业主体）

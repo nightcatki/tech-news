@@ -32,9 +32,6 @@ jobs:
 
       - name: Generate JSON
         timeout-minutes: 6
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: openrouter/free
         run: python scripts/generate_news.py
 
       - name: Commit generated data

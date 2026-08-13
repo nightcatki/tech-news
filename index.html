@@ -62,11 +62,14 @@ header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(
 .card h3 .orig{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:3px}
 .card .c-sum{font-size:13px;color:#b8c2d0;line-height:1.7;margin-bottom:10px}
 .card .c-foot{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)}
-.card .c-actions{display:flex;gap:6px}
+.card .c-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .btn{font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--line);
   background:var(--card2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-block}
 .btn.primary{background:var(--accent);color:#0f172a;border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.55;cursor:not-allowed}
 .btn.faved{background:#f59e0b33;color:#fbbf24;border-color:#f59e0b}
+.field{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:13px;outline:none}
 .empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
 /* 底部导航 */
 nav{position:fixed;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;
@@ -132,7 +135,6 @@ async function loadDate(date){
     if(!it.ai && cache[it.id]) Object.assign(it, cache[it.id], {ai:true});
   }
   render();
-  translatePending();  // 有 Key 时后台自动补翻
 }
 
 function fmtDate(d){
@@ -192,6 +194,7 @@ function render(){
       <div class="c-foot">
         <span>${(it.published||'').slice(5,16).replace('T',' ')}</span>
         <div class="c-actions">
+          <button class="btn" data-translate="${it.id}" ${it.ai?'disabled':''}>${it.ai?'已翻译':'翻译'}</button>
           <button class="btn ${faved?'faved':''}" data-fav="${it.id}">${faved?'★ 已收藏':'☆ 收藏'}</button>
           <a class="btn primary" href="${it.link}" target="_blank">读原文</a>
         </div>
@@ -213,32 +216,43 @@ function renderFavs(){
       <div class="card"><h3>${it.title_zh}</h3>
       <div class="c-sum">${it.summary}</div>
       <div class="c-foot"><span>${it.source}</span>
-      <a class="btn primary" href="${it.link}" target="_blank">读原文</a></div></div>`).join('')
+      <div class="c-actions">
+        <button class="btn" data-translate="${it.id}" ${it.ai?'disabled':''}>${it.ai?'已翻译':'翻译'}</button>
+        <a class="btn primary" href="${it.link}" target="_blank">读原文</a>
+      </div></div></div>`).join('')
     + `</div>`;
 }
 
 function renderAbout(){
-  const key = getKey();
+  const key = getApiKey();
+  const provider = getProvider();
   $('#app').innerHTML = `<div style="padding:24px 20px;font-size:14px;line-height:2">
     <h2 style="font-size:16px;margin-bottom:12px">我的</h2>
 
     <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;
          padding:16px;margin-bottom:18px">
-      <div style="font-weight:600;margin-bottom:4px">OpenRouter 免费模型 Key</div>
+      <div style="font-weight:600;margin-bottom:4px">官方 AI 翻译 Key</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-        填入 OpenRouter API Key 后，打开 App 会尝试调用免费模型把未翻译新闻转成中文摘要。更推荐把 Key 配到 GitHub Secrets，每天生成时直接写入中文。<br>
-        获取地址：<a href="https://openrouter.ai/settings/keys" target="_blank"
-        style="color:var(--accent)">openrouter.ai/settings/keys</a>
+        选择 DeepSeek 或智谱官方接口，填入 API Key 后，每张新闻卡片底部会出现“翻译”按钮。Key 只保存在当前浏览器本地。
       </div>
-      <div style="display:flex;gap:8px">
-        <input id="keyInput" type="password" placeholder="sk-or-v1-..." value="${key}"
-          style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:8px;
-          padding:9px 12px;color:var(--text);font-size:13px;outline:none;min-width:0">
+      <label style="display:block;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">服务商</label>
+      <select id="providerInput" class="field" style="margin-bottom:10px">
+        <option value="deepseek" ${provider==='deepseek'?'selected':''}>DeepSeek 官方 API</option>
+        <option value="zhipu" ${provider==='zhipu'?'selected':''}>智谱 GLM 官方 API</option>
+      </select>
+      <label style="display:block;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">API Key</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="keyInput" class="field" type="password" placeholder="粘贴官方 API Key" value="${key}"
+          style="flex:1;min-width:0">
         <button id="saveKey" class="btn primary" style="flex-shrink:0">保存</button>
       </div>
       <div id="keyStatus" style="font-size:12px;margin-top:8px;color:${key?'#4ade80':'var(--muted)'}">
-        ${key ? '已配置，刷新页面后自动翻译' : '未配置 · 当前显示英文原文'}</div>
-      ${key?'<div id="clearKey" style="font-size:12px;color:#f87171;margin-top:6px;cursor:pointer">清除 Key</div>':''}
+        ${key ? '已配置 · 回到今日后可逐条点击翻译' : '未配置 · 当前显示英文原文'}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">
+        DeepSeek 获取地址：<a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--accent)">platform.deepseek.com/api_keys</a><br>
+        智谱获取地址：<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--accent)">bigmodel.cn/usercenter/proj-mgmt/apikeys</a>
+      </div>
+      ${key?'<div id="clearKey" style="font-size:12px;color:#f87171;margin-top:6px;cursor:pointer">清除 Key 和翻译缓存</div>':''}
     </div>
 
     <h2 style="font-size:16px;margin-bottom:12px">关于</h2>
@@ -250,42 +264,60 @@ function renderAbout(){
   $('#saveKey').onclick = ()=>{
     const v = $('#keyInput').value.trim();
     if(!v) return;
-    localStorage.setItem('or_key', v);
+    localStorage.setItem('ai_provider', $('#providerInput').value);
+    localStorage.setItem('ai_key', v);
     renderAbout();
-    translatePending();  // 保存后立即开始翻译
   };
   const clr = $('#clearKey');
   if(clr) clr.onclick = ()=>{
-    localStorage.removeItem('or_key');
+    localStorage.removeItem('ai_key');
     localStorage.removeItem('trans_cache');
     renderAbout();
   };
 }
 
-/* ---------- 浏览器端 OpenRouter 免费模型翻译 ---------- */
-const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL = 'openrouter/free';
-const getKey = ()=> localStorage.getItem('or_key') || '';
+/* ---------- 浏览器端官方 API 手动翻译 ---------- */
+const PROVIDERS = {
+  deepseek: {
+    name: 'DeepSeek',
+    url: 'https://api.deepseek.com/chat/completions',
+    model: 'deepseek-chat'
+  },
+  zhipu: {
+    name: '智谱 GLM',
+    url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4-flash'
+  }
+};
+const getProvider = ()=> localStorage.getItem('ai_provider') || 'deepseek';
+const getApiKey = ()=> localStorage.getItem('ai_key') || '';
 const getCache = ()=> JSON.parse(localStorage.getItem('trans_cache')||'{}');
 const setCache = c => localStorage.setItem('trans_cache', JSON.stringify(c));
 
-async function orChat(prompt){
-  const body = { model:OR_MODEL, temperature:0.2, max_tokens:700,
+async function aiChat(prompt){
+  const provider = PROVIDERS[getProvider()] || PROVIDERS.deepseek;
+  const key = getApiKey();
+  if(!key) throw new Error('请先在“我的”里保存 API Key');
+  const body = { model:provider.model, temperature:0.2, max_tokens:700,
     response_format:{type:'json_object'},
-    messages:[{role:'user', content:prompt}] };
-  const r = await fetch(OR_URL, {
+    messages:[
+      {role:'system', content:'你只输出有效 JSON，不要 Markdown，不要解释。'},
+      {role:'user', content:prompt}
+    ] };
+  const r = await fetch(provider.url, {
     method:'POST',
     headers:{
-      'Authorization':'Bearer '+getKey(),
-      'Content-Type':'application/json',
-      'HTTP-Referer':'https://nightcatki.github.io/tech-news/',
-      'X-Title':'Tech News Workbench'
+      'Authorization':'Bearer '+key,
+      'Content-Type':'application/json'
     },
     body: JSON.stringify(body)
   });
-  if(r.status === 429) throw new Error('rate_limit');
-  if(!r.ok) throw new Error('http_'+r.status);
-  return (await r.json()).choices[0].message.content;
+  const text = await r.text();
+  if(r.status === 401 || r.status === 403) throw new Error('Key 无效或没有权限');
+  if(r.status === 429) throw new Error('额度或频率受限');
+  if(!r.ok) throw new Error(`接口错误 ${r.status}：${text.slice(0,120)}`);
+  const data = JSON.parse(text);
+  return data.choices?.[0]?.message?.content || '';
 }
 
 function translatePrompt(it){
@@ -297,32 +329,53 @@ function translatePrompt(it){
 摘要：${(it.summary_raw||'').slice(0,400)}`;
 }
 
-/* 翻译当前日期下所有未处理的条目，逐条更新界面 */
-async function translatePending(){
-  if(!getKey() || !state.data) return;
+async function translateOne(id, button){
+  if(!state.data) return;
+  const it = state.data.items.find(x=>x.id===id);
+  if(!it) return;
   const cache = getCache();
-  const pending = state.data.items.filter(it => !it.ai && !cache[it.id]);
-  if(!pending.length) return;
-  showToast(`正在用 OpenRouter 免费模型翻译 ${pending.length} 条新闻…`);
-  let done = 0;
-  for(const it of pending){
-    try{
-      const resp = await orChat(translatePrompt(it));
-      const m = resp.match(/\{[\s\S]*\}/);
-      if(m){
-        const r = JSON.parse(m[0]);
-        cache[it.id] = { title_zh:r.title_zh||it.title, summary:r.summary||'', score:+r.score||5 };
-        setCache(cache);
-        applyTranslation(it, cache[it.id]);
-      }
-    }catch(e){
-      showToast(e.message==='rate_limit' ? '免费额度限速中，稍后再打开会自动继续' : '翻译失败：'+e.message);
-      break;
-    }
-    if(++done % 5 === 0) showToast(`已翻译 ${done}/${pending.length} 条…`);
-    await new Promise(r=>setTimeout(r, 2500));  // 免费档限速保护
+  if(cache[it.id]){
+    applyTranslation(it, cache[it.id]);
+    showToast('已使用本地缓存翻译');
+    return;
   }
-  if(done === pending.length) showToast('全部翻译完成');
+  try{
+    if(button){
+      button.disabled = true;
+      button.textContent = '翻译中';
+    }
+    showToast(`正在调用 ${PROVIDERS[getProvider()]?.name || 'AI'} 翻译…`);
+    const resp = await aiChat(translatePrompt(it));
+    const parsed = extractJson(resp);
+    if(!parsed) throw new Error('模型没有返回 JSON');
+    cache[it.id] = {
+      title_zh: parsed.title_zh || it.title,
+      summary: parsed.summary || it.summary,
+      score: Number(parsed.score) || it.score
+    };
+    setCache(cache);
+    applyTranslation(it, cache[it.id]);
+    if(button) button.textContent = '已翻译';
+    showToast('翻译完成');
+  }catch(e){
+    if(button){
+      button.disabled = false;
+      button.textContent = '翻译';
+    }
+    showToast('翻译失败：' + friendlyError(e));
+  }
+}
+
+function extractJson(text){
+  const m = String(text || '').match(/\{[\s\S]*\}/);
+  if(!m) return null;
+  try{ return JSON.parse(m[0]); }catch(e){ return null; }
+}
+
+function friendlyError(e){
+  const msg = e && e.message ? e.message : String(e);
+  if(msg.includes('Failed to fetch')) return '浏览器无法直连接口，可能是服务商 CORS 限制';
+  return msg;
 }
 
 /* 把翻译结果应用到数据和界面 */
@@ -332,6 +385,8 @@ function applyTranslation(it, t){
   const s = document.getElementById('s-'+it.id);
   if(h) h.innerHTML = `${it.title_zh}<span class="orig">${it.title}</span>`;
   if(s) s.textContent = it.summary;
+  const b = document.querySelector(`[data-translate="${it.id}"]`);
+  if(b){ b.textContent = '已翻译'; b.disabled = true; }
 }
 
 function showToast(msg){
@@ -357,6 +412,9 @@ function bindCards(){
     i >= 0 ? state.favs.splice(i,1) : state.favs.push(id);
     localStorage.setItem('favs', JSON.stringify(state.favs));
     render();
+  });
+  document.querySelectorAll('[data-translate]').forEach(b=>b.onclick = ()=>{
+    translateOne(b.dataset.translate, b);
   });
 }
 
