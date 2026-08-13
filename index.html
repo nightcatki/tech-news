@@ -106,10 +106,15 @@ const state = { data:null, dates:[], dateIdx:0, tab:'all', view:'feed',
   favs: JSON.parse(localStorage.getItem('favs')||'[]') };
 
 const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company' };
+const dataUrl = path => `${path}?v=${Date.now()}`;
+const fetchJson = path => fetch(dataUrl(path), { cache:'no-store' }).then(r=>{
+  if(!r.ok) throw new Error(`http_${r.status}`);
+  return r.json();
+});
 
 async function init(){
   try{
-    state.dates = await fetch('data/index.json').then(r=>r.json()).catch(()=>[]);
+    state.dates = await fetchJson('data/index.json').catch(()=>[]);
     await loadDate(state.dates.at(-1) || 'latest');
   }catch(e){
     $('#app').innerHTML = '<div class="empty">数据加载失败，请稍后重试</div>';
@@ -119,7 +124,7 @@ async function init(){
 
 async function loadDate(date){
   const file = date === 'latest' ? 'latest' : date;
-  state.data = await fetch(`data/${file}.json`).then(r=>r.json());
+  state.data = await fetchJson(`data/${file}.json`);
   state.dateIdx = Math.max(0, state.dates.indexOf(date));
   // 应用已缓存的翻译
   const cache = getCache();
