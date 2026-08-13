@@ -38,7 +38,7 @@
 
 手动测试：仓库 → Actions → Generate daily news → Run workflow。
 
-当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。配置 OpenRouter Key 后，GitHub Actions 会用 `qwen/qwen3-4b:free` 免费模型生成中文标题和摘要。
+当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。配置 OpenRouter Key 后，GitHub Actions 会用 `openrouter/free` 免费模型路由生成中文标题和摘要。
 
 配置方式：仓库 → Settings → Secrets and variables → Actions → New repository secret，Name 填 `OPENROUTER_API_KEY`，Secret 粘贴 OpenRouter API Key。也可以在手机端“我的”里填 OpenRouter Key，让浏览器打开时自动补中文摘要。
 

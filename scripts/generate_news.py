@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-4b:free")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
 TRANSLATE_BATCH_SIZE = 4
 
 BOARDS = {
@@ -252,7 +252,34 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
         "model": OPENROUTER_MODEL,
         "temperature": 0.2,
         "max_tokens": 2500,
-        "response_format": {"type": "json_object"},
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "translated_news",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "title_zh": {"type": "string"},
+                                    "summary": {"type": "string"},
+                                    "score": {"type": "number"},
+                                },
+                                "required": ["id", "title_zh", "summary", "score"],
+                                "additionalProperties": False,
+                            },
+                        }
+                    },
+                    "required": ["items"],
+                    "additionalProperties": False,
+                },
+            },
+        },
         "messages": [
             {
                 "role": "system",

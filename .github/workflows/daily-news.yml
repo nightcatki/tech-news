@@ -33,7 +33,7 @@ jobs:
       - name: Generate JSON
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: qwen/qwen3-4b:free
+          OPENROUTER_MODEL: openrouter/free
         run: python scripts/generate_news.py
 
       - name: Commit generated data
