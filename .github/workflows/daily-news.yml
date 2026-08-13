@@ -33,7 +33,7 @@ jobs:
       - name: Generate JSON
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: openrouter/free
+          OPENROUTER_MODEL: openai/gpt-oss-20b:free
         run: python scripts/generate_news.py
 
       - name: Commit generated data

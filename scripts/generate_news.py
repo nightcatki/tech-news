@@ -28,7 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
+TRANSLATE_BATCH_SIZE = 6
 
 BOARDS = {
     "ai": "AI 大模型",
@@ -232,13 +233,18 @@ def item_id(link: str) -> str:
 
 
 def extract_json_object(text: str) -> Optional[dict]:
-    match = re.search(r"\{[\s\S]*\}", text or "")
-    if not match:
-        return None
-    try:
-        return json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return None
+    decoder = json.JSONDecoder()
+    value = text or ""
+    for idx, char in enumerate(value):
+        if char != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(value[idx:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return None
 
 
 def openrouter_chat(api_key: str, prompt: str) -> str:
@@ -247,7 +253,14 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
         "temperature": 0.2,
         "max_tokens": 5000,
         "response_format": {"type": "json_object"},
-        "messages": [{"role": "user", "content": prompt}],
+        "reasoning": {"enabled": False},
+        "messages": [
+            {
+                "role": "system",
+                "content": "You output valid JSON only. Do not include explanations, code fences, or reasoning text.",
+            },
+            {"role": "user", "content": prompt},
+        ],
     }
     req = urllib.request.Request(
         OPENROUTER_URL,
@@ -296,28 +309,30 @@ def translate_cards(cards: list[dict]) -> None:
         return
     print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.")
 
-    by_id = {card["id"]: card for card in cards}
-    try:
-        content = openrouter_chat(api_key, translate_prompt(cards))
-        translated = extract_json_object(content)
-        if not translated or not isinstance(translated.get("items"), list):
-            raise ValueError("model did not return items JSON")
-    except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
-        print(f"warning: failed to translate batch: {exc}", file=sys.stderr)
-        return
-
     translated_count = 0
-    for item in translated["items"]:
+    for start in range(0, len(cards), TRANSLATE_BATCH_SIZE):
+        batch = cards[start : start + TRANSLATE_BATCH_SIZE]
+        by_id = {card["id"]: card for card in batch}
         try:
-            card = by_id[str(item.get("id", ""))]
-            card["title_zh"] = clean_text(str(item.get("title_zh") or card["title"]))
-            card["summary"] = clean_text(str(item.get("summary") or card["summary"]))
-            card["score"] = max(1, min(10, int(float(item.get("score") or card["score"]))))
-            card["lang"] = "zh"
-            card["ai"] = True
-            translated_count += 1
-        except (KeyError, TypeError, ValueError) as exc:
-            print(f"warning: skipped translated item: {exc}", file=sys.stderr)
+            content = openrouter_chat(api_key, translate_prompt(batch))
+            translated = extract_json_object(content)
+            if not translated or not isinstance(translated.get("items"), list):
+                raise ValueError("model did not return items JSON")
+        except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
+            print(f"warning: failed to translate batch {start + 1}: {exc}", file=sys.stderr)
+            continue
+
+        for item in translated["items"]:
+            try:
+                card = by_id[str(item.get("id", ""))]
+                card["title_zh"] = clean_text(str(item.get("title_zh") or card["title"]))
+                card["summary"] = clean_text(str(item.get("summary") or card["summary"]))
+                card["score"] = max(1, min(10, int(float(item.get("score") or card["score"]))))
+                card["lang"] = "zh"
+                card["ai"] = True
+                translated_count += 1
+            except (KeyError, TypeError, ValueError) as exc:
+                print(f"warning: skipped translated item: {exc}", file=sys.stderr)
     print(f"translated {translated_count}/{len(cards)} items")
 
 
