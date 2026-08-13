@@ -56,9 +56,6 @@ header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(
 .badge.\33 dgs{background:#a855f733;color:#d8b4fe}
 .badge.embodied{background:#22c55e33;color:#86efac}
 .badge.company{background:#f9731633;color:#fdba74}
-.badge.dev{background:#14b8a633;color:#5eead4}
-.badge.infra{background:#6366f133;color:#a5b4fc}
-.badge.security{background:#ef444433;color:#fca5a5}
 .score{margin-left:auto;font-size:11px;color:var(--muted)}
 .score.hot{color:#f87171;font-weight:700}
 .card h3{font-size:15px;line-height:1.5;margin-bottom:6px}
@@ -115,8 +112,7 @@ const state = { data:null, dates:[], dateIdx:0, tab:'all', view:'feed',
   favs: JSON.parse(localStorage.getItem('favs')||'[]'),
   originalView: {} };
 
-const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company',
-  dev:'dev', infra:'infra', security:'security' };
+const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company' };
 const dataUrl = path => `${path}?v=${Date.now()}`;
 const fetchJson = path => fetch(dataUrl(path), { cache:'no-store' }).then(r=>{
   if(!r.ok) throw new Error(`http_${r.status}`);
@@ -168,7 +164,7 @@ function render(){
   let html = `<div class="digest"><span class="tag">AI 晨报</span>${d.digest}</div>`;
 
   if(d.policies && d.policies.length){
-    html += `<div class="policy-sec"><h2>上周政策速递</h2>` +
+    html += `<div class="policy-sec"><h2>本周政策速递</h2>` +
       d.policies.map(p=>`
         <div class="policy-card">
           <div class="p-title">${p.title}</div>
@@ -348,7 +344,7 @@ async function aiChat(prompt){
 
 function translatePrompt(it){
   return `你是科技新闻编辑。处理下面这条新闻，输出严格 JSON（不要 markdown 代码块）：
-{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","detail":"如果这是重要新闻，写180字以内中文重点解读：背景、变化、影响；普通新闻可为空字符串","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能/开发者工具/安全的读者，只填数字）}
+{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","detail":"如果这是重要新闻，写180字以内中文重点解读：背景、变化、影响；普通新闻可为空字符串","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能/产品与公司的读者，只填数字）}
 
 标题：${it.title}
 来源：${it.source}

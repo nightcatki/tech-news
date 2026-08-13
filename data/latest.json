@@ -1,20 +1,17 @@
 {
   "date": "2026-08-13",
-  "generated_at": "2026-08-13T18:37:41+08:00",
+  "generated_at": "2026-08-13T18:50:11+08:00",
   "digest": "今日抓取到 24 条科技新闻。重点关注：Serve Qwen3.8-2.4T-A95B, a 2.4T-Parameter Model, with Configurable Reasoning on NVIDIA GB300 NVL72；How to Choose Full-Stack Observability for NVIDIA AI Factories；NVIDIA JetPack 7.2.1 Adds Agentic Video Skills and T3000 Emulation。",
   "boards": {
     "ai": "AI 大模型",
     "3dgs": "3DGS",
     "embodied": "具身智能",
-    "company": "产品与公司",
-    "dev": "开发者工具",
-    "infra": "算力与云",
-    "security": "安全漏洞"
+    "company": "产品与公司"
   },
   "items": [
     {
       "id": "06e533fdcf85",
-      "board": "ai",
+      "board": "company",
       "source": "NVIDIA Developer",
       "title": "Serve Qwen3.8-2.4T-A95B, a 2.4T-Parameter Model, with Configurable Reasoning on NVIDIA GB300 NVL72",
       "title_zh": "Serve Qwen3.8-2.4T-A95B, a 2.4T-Parameter Model, with Configurable Reasoning on NVIDIA GB300 NVL72",
@@ -23,7 +20,7 @@
       "summary_raw": "Alibaba released the open weights for Qwen3.8-2.4T-A95B (Qwen3.8-Max), its largest open-weight model, bringing near-frontier capabilities to the open...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:37:49+08:00",
+      "published": "2026-08-13T18:50:18+08:00",
       "link": "https://developer.nvidia.com/blog/serve-qwen3-8-2-4t-a95b-a-2-4t-parameter-model-with-configurable-reasoning-on-nvidia-gb300-nvl72/",
       "lang": "en",
       "ai": false
@@ -39,7 +36,7 @@
       "summary_raw": "AI infrastructure spans multiple layers, from compute and networking to storage, orchestration, and applications. When performance degrades, identifying the...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:37:49+08:00",
+      "published": "2026-08-13T18:50:18+08:00",
       "link": "https://developer.nvidia.com/blog/how-to-choose-full-stack-observability-for-nvidia-ai-factories/",
       "lang": "en",
       "ai": false
@@ -55,7 +52,7 @@
       "summary_raw": "Video is a core data path across NVIDIA Jetson applications, from robotics and intelligent video analytics to industrial automation, healthcare, media...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:37:49+08:00",
+      "published": "2026-08-13T18:50:18+08:00",
       "link": "https://developer.nvidia.com/blog/nvidia-jetpack-7-2-1-adds-agentic-video-skills-and-t3000-emulation/",
       "lang": "en",
       "ai": false
@@ -78,7 +75,7 @@
     },
     {
       "id": "52be363e70b3",
-      "board": "ai",
+      "board": "company",
       "source": "GitHub Changelog",
       "title": "Agent Plugins 1.0 in VS Code, Copilot CLI, and the Copilot app",
       "title_zh": "Agent Plugins 1.0 in VS Code, Copilot CLI, and the Copilot app",
@@ -94,7 +91,7 @@
     },
     {
       "id": "50336f408dcb",
-      "board": "dev",
+      "board": "company",
       "source": "GitHub Changelog",
       "title": "Rule insights for organizations in public preview",
       "title_zh": "Rule insights for organizations in public preview",
@@ -142,7 +139,7 @@
     },
     {
       "id": "b0169fd78a22",
-      "board": "ai",
+      "board": "company",
       "source": "NVIDIA Blog",
       "title": "NVIDIA AI Factory Compute Is Becoming an Investable Asset Class",
       "title_zh": "NVIDIA AI Factory Compute Is Becoming an Investable Asset Class",
@@ -174,7 +171,7 @@
     },
     {
       "id": "81bd7a517074",
-      "board": "dev",
+      "board": "company",
       "source": "GitHub Changelog",
       "title": "GitHub Enterprise Server 3.22 release candidate",
       "title_zh": "GitHub Enterprise Server 3.22 release candidate",
@@ -238,7 +235,7 @@
     },
     {
       "id": "e7b61edb1ce2",
-      "board": "security",
+      "board": "company",
       "source": "CISA Advisories",
       "title": "Johnson Controls C-CURE 9000 and Victor application server (Update A)",
       "title_zh": "Johnson Controls C-CURE 9000 and Victor application server (Update A)",
@@ -254,7 +251,7 @@
     },
     {
       "id": "f35136fdfa00",
-      "board": "security",
+      "board": "company",
       "source": "CISA Advisories",
       "title": "Pulsetto Vagus Nerve Stimulator",
       "title_zh": "Pulsetto Vagus Nerve Stimulator",
@@ -270,7 +267,7 @@
     },
     {
       "id": "9ddeac63f2bb",
-      "board": "security",
+      "board": "company",
       "source": "CISA Advisories",
       "title": "CISA Adds Three Known Exploited Vulnerabilities to Catalog",
       "title_zh": "CISA Adds Three Known Exploited Vulnerabilities to Catalog",
@@ -286,7 +283,7 @@
     },
     {
       "id": "365881241464",
-      "board": "security",
+      "board": "company",
       "source": "CISA Advisories",
       "title": "Mira Hormone Monitor, Mira Android App",
       "title_zh": "Mira Hormone Monitor, Mira Android App",
@@ -382,7 +379,7 @@
     },
     {
       "id": "47a4afa26530",
-      "board": "security",
+      "board": "company",
       "source": "CISA Advisories",
       "title": "#StopRansomware: Gunra Ransomware",
       "title_zh": "#StopRansomware: Gunra Ransomware",
@@ -397,5 +394,22 @@
       "ai": false
     }
   ],
-  "policies": []
+  "policies": [
+    {
+      "title": "Expanding Capabilities to Combat Transnational Cyber-Enabled Crime",
+      "source": "White House Presidential Actions",
+      "what": "发布/更新：Expanding Capabilities to Combat Transnational Cyber-Enabled Crime。 MEMORANDUM FOR THE VICE PRESIDENT THE SECRETARY OF STATE THE SECRETARY OF THE TREASURY THE SECRETARY OF WAR THE ATTORNEY GENERAL THE SECRETARY OF C...",
+      "meaning": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
+      "published": "2026-08-13T05:43:13+08:00",
+      "link": "https://www.whitehouse.gov/presidential-actions/2026/08/expanding-capabilities-to-combat-transnational-cyber-enabled-crime/"
+    },
+    {
+      "title": "Adjusting Imports of Polysilicon and its Derivatives into the United States",
+      "source": "White House Presidential Actions",
+      "what": "发布/更新：Adjusting Imports of Polysilicon and its Derivatives into the United States。 BY THE PRESIDENT OF THE UNITED STATES OF AMERICA A PROCLAMATION 1. Polysilicon is the base material underpinning the security of America’s semicond...",
+      "meaning": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
+      "published": "2026-08-07T05:03:35+08:00",
+      "link": "https://www.whitehouse.gov/presidential-actions/2026/08/adjusting-imports-of-polysilicon-and-its-derivatives-into-the-united-states/"
+    }
+  ]
 }

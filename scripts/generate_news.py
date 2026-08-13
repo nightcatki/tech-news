@@ -32,9 +32,6 @@ BOARDS = {
     "3dgs": "3DGS",
     "embodied": "具身智能",
     "company": "产品与公司",
-    "dev": "开发者工具",
-    "infra": "算力与云",
-    "security": "安全漏洞",
 }
 
 SOURCE_TIER_SCORE = {
@@ -50,13 +47,13 @@ SOURCES = [
     ("Google DeepMind", "ai", "https://deepmind.google/blog/rss.xml", "primary", 10),
     ("Google AI", "ai", "https://blog.google/technology/ai/rss/", "primary", 10),
     ("Hugging Face Blog", "ai", "https://huggingface.co/blog/feed.xml", "primary", 8),
-    ("NVIDIA Blog", "infra", "https://blogs.nvidia.com/feed/", "primary", 8),
-    ("NVIDIA Developer", "infra", "https://developer.nvidia.com/blog/feed/", "primary", 8),
-    ("GitHub Changelog", "dev", "https://github.blog/changelog/feed/", "primary", 10),
-    ("AWS News Blog", "infra", "https://aws.amazon.com/blogs/aws/feed/", "primary", 8),
-    ("Microsoft Dev Blogs", "dev", "https://devblogs.microsoft.com/feed/", "primary", 8),
-    ("GitHub Security Blog", "security", "https://github.blog/security/feed/", "primary", 8),
-    ("CISA Advisories", "security", "https://www.cisa.gov/cybersecurity-advisories/all.xml", "advisory", 8),
+    ("NVIDIA Blog", "ai", "https://blogs.nvidia.com/feed/", "primary", 8),
+    ("NVIDIA Developer", "ai", "https://developer.nvidia.com/blog/feed/", "primary", 8),
+    ("GitHub Changelog", "company", "https://github.blog/changelog/feed/", "primary", 10),
+    ("AWS News Blog", "company", "https://aws.amazon.com/blogs/aws/feed/", "primary", 8),
+    ("Microsoft Dev Blogs", "company", "https://devblogs.microsoft.com/feed/", "primary", 8),
+    ("GitHub Security Blog", "company", "https://github.blog/security/feed/", "primary", 8),
+    ("CISA Advisories", "company", "https://www.cisa.gov/cybersecurity-advisories/all.xml", "advisory", 8),
     # B tier: useful research feeds, but noisier than official announcements.
     ("arXiv cs.AI", "ai", "https://export.arxiv.org/rss/cs.AI", "research", 6),
     ("arXiv cs.CL", "ai", "https://export.arxiv.org/rss/cs.CL", "research", 6),
@@ -66,6 +63,16 @@ SOURCES = [
     ("TechCrunch", "company", "https://techcrunch.com/feed/", "media", 4),
     ("The Verge", "company", "https://www.theverge.com/rss/index.xml", "media", 4),
 ]
+
+POLICY_RSS_SOURCES = [
+    ("White House Presidential Actions", "https://www.whitehouse.gov/presidential-actions/feed/"),
+    ("NIST Information Technology", "https://www.nist.gov/news-events/information%20technology/rss.xml"),
+]
+
+FEDERAL_REGISTER_URL = (
+    "https://www.federalregister.gov/api/v1/documents.json"
+    "?per_page=20&order=newest&conditions%5Bterm%5D=artificial%20intelligence"
+)
 
 KEYWORDS = {
     "ai": [
@@ -114,40 +121,63 @@ KEYWORDS = {
         "release",
         "startup",
     ],
-    "dev": [
-        "api",
-        "changelog",
-        "cli",
-        "codex",
-        "copilot",
-        "developer",
-        "github",
-        "release",
-        "sdk",
-        "typescript",
-    ],
-    "infra": [
-        "aws",
-        "azure",
-        "cloud",
-        "cuda",
-        "gpu",
-        "inference",
-        "nvidia",
-        "training",
-    ],
-    "security": [
-        "advisory",
-        "attack",
-        "breach",
-        "cisa",
-        "cve",
-        "exploit",
-        "malware",
-        "patch",
-        "security",
-        "vulnerability",
-    ],
+}
+
+SIGNAL_KEYWORDS = [
+    "api",
+    "aws",
+    "azure",
+    "changelog",
+    "cli",
+    "cloud",
+    "codex",
+    "copilot",
+    "cuda",
+    "developer",
+    "github",
+    "gpu",
+    "inference",
+    "nvidia",
+    "sdk",
+    "security",
+    "training",
+    "typescript",
+]
+
+POLICY_KEYWORDS = [
+    "ai",
+    "algorithm",
+    "artificial intelligence",
+    "chip",
+    "cloud",
+    "compute",
+    "cyber",
+    "data",
+    "deepfake",
+    "digital",
+    "export control",
+    "frontier model",
+    "model",
+    "privacy",
+    "semiconductor",
+]
+
+POLICY_EXCLUDE_KEYWORDS = [
+    "airplane",
+    "airworthiness",
+    "aviation",
+    "boeing",
+    "citizenship",
+    "event date",
+    "substance use",
+    "webinar",
+]
+
+POLICY_SUMMARY_HINTS = {
+    "white house": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
+    "federal register": "美国联邦正式法规/公告渠道，适合关注合规义务、征求意见和监管落地。",
+    "federal trade commission": "美国 FTC 消费者保护和竞争监管动态，可能影响 AI 产品宣传、隐私和平台责任。",
+    "nist": "美国 NIST 标准与测评动态，通常影响 AI 安全、网络安全、标准化和企业合规实践。",
 }
 
 IMPORTANT_TERMS = [
@@ -184,6 +214,41 @@ LOW_SIGNAL_TERMS = [
     "trailer",
 ]
 
+# Extra scoring terms keep developer, infrastructure, and security updates visible
+# without turning them into separate top-level tabs.
+KEYWORDS["company"].extend(
+    [
+        "api",
+        "changelog",
+        "cli",
+        "codex",
+        "copilot",
+        "developer",
+        "github",
+        "release",
+        "sdk",
+        "typescript",
+        "aws",
+        "azure",
+        "cloud",
+        "cuda",
+        "gpu",
+        "inference",
+        "nvidia",
+        "training",
+        "advisory",
+        "attack",
+        "breach",
+        "cisa",
+        "cve",
+        "exploit",
+        "malware",
+        "patch",
+        "security",
+        "vulnerability",
+    ]
+)
+
 
 @dataclass
 class FeedItem:
@@ -194,6 +259,15 @@ class FeedItem:
     published: str
     summary_raw: str
     tier: str
+
+
+@dataclass
+class PolicyItem:
+    title: str
+    link: str
+    source: str
+    published: str
+    summary_raw: str
 
 
 def clean_text(value: str) -> str:
@@ -214,6 +288,10 @@ def fetch_url(url: str) -> bytes:
         return response.read()
 
 
+def fetch_json_url(url: str) -> dict:
+    return json.loads(fetch_url(url).decode("utf-8"))
+
+
 def parse_date(value: str) -> str:
     if not value:
         return datetime.now(TZ).isoformat(timespec="seconds")
@@ -224,6 +302,16 @@ def parse_date(value: str) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(TZ).isoformat(timespec="seconds")
+
+
+def iso_to_dt(value: str) -> datetime:
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return datetime.now(TZ)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(TZ)
 
 
 def child_text(node: ET.Element, names: Iterable[str]) -> str:
@@ -284,6 +372,31 @@ def parse_feed(content: bytes, source: str, default_board: str, tier: str) -> li
     return items
 
 
+def parse_policy_feed(content: bytes, source: str) -> list[PolicyItem]:
+    return [
+        PolicyItem(
+            title=item.title,
+            link=item.link,
+            source=source,
+            published=item.published,
+            summary_raw=item.summary_raw,
+        )
+        for item in parse_feed(content, source, "company", "advisory")
+    ]
+
+
+def parse_federal_register(payload: dict) -> list[PolicyItem]:
+    items: list[PolicyItem] = []
+    for row in payload.get("results", []):
+        title = clean_text(str(row.get("title") or ""))
+        link = clean_text(str(row.get("html_url") or row.get("pdf_url") or ""))
+        summary = clean_text(str(row.get("abstract") or ""))
+        published = parse_date(str(row.get("publication_date") or ""))
+        if title and link:
+            items.append(PolicyItem(title, link, "Federal Register", published, summary))
+    return items
+
+
 def classify(text: str, fallback: str) -> str:
     lowered = text.lower()
     scores = {
@@ -292,6 +405,75 @@ def classify(text: str, fallback: str) -> str:
     }
     board, score = max(scores.items(), key=lambda pair: pair[1])
     return board if score else fallback
+
+
+def has_keyword(text: str, keyword: str) -> bool:
+    return re.search(rf"\b{re.escape(keyword)}\b", text) is not None
+
+
+def is_policy_relevant(item: PolicyItem, cutoff: datetime, now: datetime) -> bool:
+    published = iso_to_dt(item.published)
+    if published < cutoff or published > now:
+        return False
+    text = f"{item.title} {item.summary_raw}".lower()
+    if any(has_keyword(text, keyword) for keyword in POLICY_EXCLUDE_KEYWORDS):
+        return False
+    return any(has_keyword(text, keyword) for keyword in POLICY_KEYWORDS)
+
+
+def policy_meaning(source: str) -> str:
+    lowered = source.lower()
+    for key, hint in POLICY_SUMMARY_HINTS.items():
+        if key in lowered:
+            return hint
+    return "科技政策或监管动态，建议关注其对 AI 产品、数据合规、算力供应和企业部署的影响。"
+
+
+def make_policy_what(item: PolicyItem) -> str:
+    summary = clean_text(item.summary_raw)
+    if len(summary) > 150:
+        summary = summary[:147].rstrip() + "..."
+    return f"发布/更新：{item.title}。" + (f" {summary}" if summary else "")
+
+
+def collect_policies(now: datetime, limit: int = 5) -> list[dict]:
+    cutoff = now - timedelta(days=7)
+    collected: list[PolicyItem] = []
+    seen: set[str] = set()
+
+    for source, url in POLICY_RSS_SOURCES:
+        try:
+            parsed = parse_policy_feed(fetch_url(url), source)
+        except (ET.ParseError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            print(f"warning: failed to fetch policy source {source}: {exc}", file=sys.stderr)
+            continue
+        collected.extend(parsed[:10])
+
+    try:
+        collected.extend(parse_federal_register(fetch_json_url(FEDERAL_REGISTER_URL)))
+    except (json.JSONDecodeError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        print(f"warning: failed to fetch policy source Federal Register: {exc}", file=sys.stderr)
+
+    filtered: list[PolicyItem] = []
+    for item in collected:
+        key = item.link.split("?")[0]
+        if key in seen or not is_policy_relevant(item, cutoff, now):
+            continue
+        seen.add(key)
+        filtered.append(item)
+
+    filtered.sort(key=lambda item: item.published, reverse=True)
+    return [
+        {
+            "title": item.title,
+            "source": item.source,
+            "what": make_policy_what(item),
+            "meaning": policy_meaning(item.source),
+            "published": item.published,
+            "link": item.link,
+        }
+        for item in filtered[:limit]
+    ]
 
 
 def score_item(item: FeedItem) -> int:
@@ -408,7 +590,7 @@ def build_payload(items: list[FeedItem], now: datetime) -> dict:
         "digest": digest,
         "boards": BOARDS,
         "items": cards,
-        "policies": [],
+        "policies": collect_policies(now),
     }
 
 
