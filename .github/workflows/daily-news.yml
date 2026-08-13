@@ -31,6 +31,7 @@ jobs:
           python-version: "3.x"
 
       - name: Generate JSON
+        timeout-minutes: 6
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: openrouter/free

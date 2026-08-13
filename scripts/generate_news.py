@@ -304,6 +304,15 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
     return payload["choices"][0]["message"]["content"]
 
 
+def http_error_detail(exc: urllib.error.HTTPError) -> str:
+    try:
+        body = exc.read().decode("utf-8", errors="replace")
+    except OSError:
+        body = ""
+    body = re.sub(r"\s+", " ", body).strip()
+    return f"HTTP {exc.code}: {body[:300]}" if body else f"HTTP {exc.code}: {exc.reason}"
+
+
 def translate_prompt(cards: list[dict]) -> str:
     items = [
         {
@@ -333,7 +342,7 @@ def translate_cards(cards: list[dict]) -> None:
     if not api_key:
         print("OPENROUTER_API_KEY is not set; keeping source-language summaries.")
         return
-    print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.")
+    print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.", flush=True)
 
     translated_count = 0
     for start in range(0, len(cards), TRANSLATE_BATCH_SIZE):
@@ -344,7 +353,14 @@ def translate_cards(cards: list[dict]) -> None:
             translated = extract_json_object(content)
             if not translated or not isinstance(translated.get("items"), list):
                 raise ValueError("model did not return items JSON")
-        except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
+        except urllib.error.HTTPError as exc:
+            print(
+                f"warning: failed to translate batch {start + 1}: {http_error_detail(exc)}",
+                file=sys.stderr,
+                flush=True,
+            )
+            continue
+        except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:
             print(f"warning: failed to translate batch {start + 1}: {exc}", file=sys.stderr)
             continue
 
