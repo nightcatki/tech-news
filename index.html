@@ -35,6 +35,8 @@ header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(
   border-radius:10px;padding:12px 14px;margin-bottom:8px}
 .policy-card .p-title{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:6px}
 .policy-card .p-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.policy-card .p-region{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:8px;
+  background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b44}
 .policy-card .p-row{font-size:13px;line-height:1.6;color:#d6cfc4;margin-top:4px}
 .policy-card .p-row b{color:#fbbf24;font-weight:600}
 .policy-card a{color:var(--accent);font-size:12px;text-decoration:none}
@@ -164,11 +166,11 @@ function render(){
   let html = `<div class="digest"><span class="tag">AI 晨报</span>${d.digest}</div>`;
 
   if(d.policies && d.policies.length){
-    html += `<div class="policy-sec"><h2>本周政策速递</h2>` +
+    html += `<div class="policy-sec"><h2>中国 / 国际政策速递</h2>` +
       d.policies.map(p=>`
         <div class="policy-card">
           <div class="p-title">${p.title}</div>
-          <div class="p-meta">${p.source}</div>
+          <div class="p-meta">${p.region?`<span class="p-region">${p.region}</span>`:''}${p.source}</div>
           ${p.what?`<div class="p-row"><b>说什么</b>｜${p.what}</div>`:''}
           ${p.meaning?`<div class="p-row"><b>意味着什么</b>｜${p.meaning}</div>`:''}
           <a href="${p.link}" target="_blank">查看原文 →</a>

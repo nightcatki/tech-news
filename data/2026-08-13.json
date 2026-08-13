@@ -1,6 +1,6 @@
 {
   "date": "2026-08-13",
-  "generated_at": "2026-08-13T18:50:11+08:00",
+  "generated_at": "2026-08-13T19:00:46+08:00",
   "digest": "今日抓取到 24 条科技新闻。重点关注：Serve Qwen3.8-2.4T-A95B, a 2.4T-Parameter Model, with Configurable Reasoning on NVIDIA GB300 NVL72；How to Choose Full-Stack Observability for NVIDIA AI Factories；NVIDIA JetPack 7.2.1 Adds Agentic Video Skills and T3000 Emulation。",
   "boards": {
     "ai": "AI 大模型",
@@ -20,7 +20,7 @@
       "summary_raw": "Alibaba released the open weights for Qwen3.8-2.4T-A95B (Qwen3.8-Max), its largest open-weight model, bringing near-frontier capabilities to the open...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:50:18+08:00",
+      "published": "2026-08-13T19:00:55+08:00",
       "link": "https://developer.nvidia.com/blog/serve-qwen3-8-2-4t-a95b-a-2-4t-parameter-model-with-configurable-reasoning-on-nvidia-gb300-nvl72/",
       "lang": "en",
       "ai": false
@@ -36,7 +36,7 @@
       "summary_raw": "AI infrastructure spans multiple layers, from compute and networking to storage, orchestration, and applications. When performance degrades, identifying the...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:50:18+08:00",
+      "published": "2026-08-13T19:00:55+08:00",
       "link": "https://developer.nvidia.com/blog/how-to-choose-full-stack-observability-for-nvidia-ai-factories/",
       "lang": "en",
       "ai": false
@@ -52,7 +52,7 @@
       "summary_raw": "Video is a core data path across NVIDIA Jetson applications, from robotics and intelligent video analytics to industrial automation, healthcare, media...",
       "score": 10,
       "tier": "primary",
-      "published": "2026-08-13T18:50:18+08:00",
+      "published": "2026-08-13T19:00:55+08:00",
       "link": "https://developer.nvidia.com/blog/nvidia-jetpack-7-2-1-adds-agentic-video-skills-and-t3000-emulation/",
       "lang": "en",
       "ai": false
@@ -397,6 +397,7 @@
   "policies": [
     {
       "title": "Expanding Capabilities to Combat Transnational Cyber-Enabled Crime",
+      "region": "国际政策",
       "source": "White House Presidential Actions",
       "what": "发布/更新：Expanding Capabilities to Combat Transnational Cyber-Enabled Crime。 MEMORANDUM FOR THE VICE PRESIDENT THE SECRETARY OF STATE THE SECRETARY OF THE TREASURY THE SECRETARY OF WAR THE ATTORNEY GENERAL THE SECRETARY OF C...",
       "meaning": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
@@ -405,11 +406,39 @@
     },
     {
       "title": "Adjusting Imports of Polysilicon and its Derivatives into the United States",
+      "region": "国际政策",
       "source": "White House Presidential Actions",
       "what": "发布/更新：Adjusting Imports of Polysilicon and its Derivatives into the United States。 BY THE PRESIDENT OF THE UNITED STATES OF AMERICA A PROCLAMATION 1. Polysilicon is the base material underpinning the security of America’s semicond...",
       "meaning": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
       "published": "2026-08-07T05:03:35+08:00",
       "link": "https://www.whitehouse.gov/presidential-actions/2026/08/adjusting-imports-of-polysilicon-and-its-derivatives-into-the-united-states/"
+    },
+    {
+      "title": "《小型个人信息处理者个人信息保护简化措施规定》答记者问",
+      "region": "中国政策",
+      "source": "国家网信办",
+      "what": "发布/更新：《小型个人信息处理者个人信息保护简化措施规定》答记者问。 国家网信办、公安部联合公布小型个人信息处理者个人信息保护简化措施，降低中小微企业合规成本。",
+      "meaning": "中国网信监管动态，重点影响算法、数据安全、个人信息保护、生成式 AI 和平台治理。",
+      "published": "2026-07-24T17:00:00+08:00",
+      "link": "https://www.cac.gov.cn/2026-07/24/c_1786638889576451.htm"
+    },
+    {
+      "title": "深化互联网协议第六版（IPv6）技术创新和融合应用实施方案（2026—2030年）",
+      "region": "中国政策",
+      "source": "国家网信办",
+      "what": "发布/更新：深化互联网协议第六版（IPv6）技术创新和融合应用实施方案（2026—2030年）。 推动 IPv6 与人工智能、大模型训练推理、智能体互联协同、算力网络、工业互联网等场景融合创新。",
+      "meaning": "中国网信监管动态，重点影响算法、数据安全、个人信息保护、生成式 AI 和平台治理。",
+      "published": "2026-07-21T18:00:00+08:00",
+      "link": "https://www.cac.gov.cn/2026-07/21/c_1786380789858394.htm"
+    },
+    {
+      "title": "Commission publishes guidelines on transparency obligations for providers and deployers of certain AI systems",
+      "region": "国际政策",
+      "source": "European Commission",
+      "what": "发布/更新：Commission publishes guidelines on transparency obligations for providers and deployers of certain AI systems。 The European Commission published AI Act transparency guidance for providers and deployers of certain AI systems.",
+      "meaning": "欧盟委员会政策和监管动态，重点影响 AI Act、数据、云、芯片和数字市场规则。",
+      "published": "2026-07-20T12:00:00+08:00",
+      "link": "https://digital-strategy.ec.europa.eu/en/news/commission-publishes-guidelines-transparency-obligations-providers-and-deployers-certain-ai-systems"
     }
   ]
 }

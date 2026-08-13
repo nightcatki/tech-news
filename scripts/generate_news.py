@@ -13,8 +13,10 @@ import hashlib
 import html
 import json
 import re
+import ssl
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -65,14 +67,23 @@ SOURCES = [
 ]
 
 POLICY_RSS_SOURCES = [
-    ("White House Presidential Actions", "https://www.whitehouse.gov/presidential-actions/feed/"),
-    ("NIST Information Technology", "https://www.nist.gov/news-events/information%20technology/rss.xml"),
+    ("国际政策", "White House Presidential Actions", "https://www.whitehouse.gov/presidential-actions/feed/"),
+    ("国际政策", "European Commission Press Corner", "https://ec.europa.eu/commission/presscorner/api/rss?language=en"),
 ]
 
 FEDERAL_REGISTER_URL = (
     "https://www.federalregister.gov/api/v1/documents.json"
     "?per_page=20&order=newest&conditions%5Bterm%5D=artificial%20intelligence"
 )
+
+CHINA_POLICY_HTML_SOURCES = [
+    ("中国政策", "中国政府网 最新政策", "https://www.gov.cn/zhengce/zuixin/home_106.htm"),
+    ("中国政策", "中国政府网 部门文件", "https://www.gov.cn/zhengce/zhengceku/bmwj/home.htm"),
+    ("中国政策", "工信部 RSS 订阅页", "https://www.miit.gov.cn/RRSdy/index.html"),
+    ("中国政策", "国家网信办 政策文件", "https://www.cac.gov.cn/wxzw/zcfg/zcwj/A09370306index_1.htm"),
+    ("中国政策", "国家网信办 网信发布", "https://www.cac.gov.cn/wxzw/wxfb/A093702index_1.htm"),
+    ("中国政策", "国家网信办 网信@你", "https://www.cac.gov.cn/hdfw/wxan/A093802index_1.htm"),
+]
 
 KEYWORDS = {
     "ai": [
@@ -160,6 +171,25 @@ POLICY_KEYWORDS = [
     "model",
     "privacy",
     "semiconductor",
+    "个人信息",
+    "云计算",
+    "人工智能",
+    "信息化",
+    "信息服务",
+    "区块链",
+    "半导体",
+    "大模型",
+    "工业互联网",
+    "数据",
+    "数据安全",
+    "数字",
+    "智能体",
+    "深度合成",
+    "生成合成",
+    "算法",
+    "算力",
+    "网络安全",
+    "芯片",
 ]
 
 POLICY_EXCLUDE_KEYWORDS = [
@@ -171,13 +201,19 @@ POLICY_EXCLUDE_KEYWORDS = [
     "event date",
     "substance use",
     "webinar",
+    "招聘",
+    "征集",
+    "培训",
+    "会议",
 ]
 
 POLICY_SUMMARY_HINTS = {
+    "中国政府网": "中国中央和国务院部门政策，适合关注 AI、数据、算力、芯片、数字经济等国内监管和产业方向。",
+    "工信部": "中国工业和信息化主管部门动态，通常影响 AI 产业、工业互联网、通信、芯片和制造业数字化。",
+    "国家网信办": "中国网信监管动态，重点影响算法、数据安全、个人信息保护、生成式 AI 和平台治理。",
     "white house": "美国行政层面的科技政策或总统行动，可能影响 AI、芯片、安全与政府采购方向。",
+    "european commission": "欧盟委员会政策和监管动态，重点影响 AI Act、数据、云、芯片和数字市场规则。",
     "federal register": "美国联邦正式法规/公告渠道，适合关注合规义务、征求意见和监管落地。",
-    "federal trade commission": "美国 FTC 消费者保护和竞争监管动态，可能影响 AI 产品宣传、隐私和平台责任。",
-    "nist": "美国 NIST 标准与测评动态，通常影响 AI 安全、网络安全、标准化和企业合规实践。",
 }
 
 IMPORTANT_TERMS = [
@@ -263,11 +299,48 @@ class FeedItem:
 
 @dataclass
 class PolicyItem:
+    region: str
     title: str
     link: str
     source: str
     published: str
     summary_raw: str
+
+
+FALLBACK_POLICY_ITEMS = [
+    PolicyItem(
+        region="中国政策",
+        title="深化互联网协议第六版（IPv6）技术创新和融合应用实施方案（2026—2030年）",
+        link="https://www.cac.gov.cn/2026-07/21/c_1786380789858394.htm",
+        source="国家网信办",
+        published="2026-07-21T18:00:00+08:00",
+        summary_raw="推动 IPv6 与人工智能、大模型训练推理、智能体互联协同、算力网络、工业互联网等场景融合创新。",
+    ),
+    PolicyItem(
+        region="中国政策",
+        title="《小型个人信息处理者个人信息保护简化措施规定》答记者问",
+        link="https://www.cac.gov.cn/2026-07/24/c_1786638889576451.htm",
+        source="国家网信办",
+        published="2026-07-24T17:00:00+08:00",
+        summary_raw="国家网信办、公安部联合公布小型个人信息处理者个人信息保护简化措施，降低中小微企业合规成本。",
+    ),
+    PolicyItem(
+        region="中国政策",
+        title="国家网信办、国家发展改革委、工业和信息化部联合印发《智能体规范应用与创新发展实施意见》",
+        link="https://www.cac.gov.cn/2026-05/08/c_1779979789472520.htm",
+        source="国家网信办",
+        published="2026-05-08T18:00:00+08:00",
+        summary_raw="围绕智能体规范应用、创新发展、安全底线、应用牵引和产业生态提出政策要求。",
+    ),
+    PolicyItem(
+        region="国际政策",
+        title="Commission publishes guidelines on transparency obligations for providers and deployers of certain AI systems",
+        link="https://digital-strategy.ec.europa.eu/en/news/commission-publishes-guidelines-transparency-obligations-providers-and-deployers-certain-ai-systems",
+        source="European Commission",
+        published="2026-07-20T12:00:00+08:00",
+        summary_raw="The European Commission published AI Act transparency guidance for providers and deployers of certain AI systems.",
+    ),
+]
 
 
 def clean_text(value: str) -> str:
@@ -277,14 +350,15 @@ def clean_text(value: str) -> str:
     return value.strip()
 
 
-def fetch_url(url: str) -> bytes:
+def fetch_url(url: str, allow_insecure_ssl: bool = False) -> bytes:
     req = urllib.request.Request(
         url,
         headers={
             "User-Agent": "tech-news-workbench/1.0 (+https://github.com/nightcatki/tech-news)"
         },
     )
-    with urllib.request.urlopen(req, timeout=25) as response:
+    context = ssl._create_unverified_context() if allow_insecure_ssl else None
+    with urllib.request.urlopen(req, timeout=25, context=context) as response:
         return response.read()
 
 
@@ -302,6 +376,29 @@ def parse_date(value: str) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(TZ).isoformat(timespec="seconds")
+
+
+def parse_policy_date(value: str) -> str:
+    value = clean_text(value)
+    now = datetime.now(TZ)
+    patterns = [
+        (r"(\d{4})[-年./](\d{1,2})[-月./](\d{1,2})", False),
+        (r"(\d{1,2})[-月./](\d{1,2})", True),
+    ]
+    for pattern, missing_year in patterns:
+        matched = re.search(pattern, value)
+        if not matched:
+            continue
+        if missing_year:
+            year = now.year
+            month, day = map(int, matched.groups())
+        else:
+            year, month, day = map(int, matched.groups())
+        try:
+            return datetime(year, month, day, tzinfo=TZ).isoformat(timespec="seconds")
+        except ValueError:
+            return now.isoformat(timespec="seconds")
+    return parse_date(value)
 
 
 def iso_to_dt(value: str) -> datetime:
@@ -373,16 +470,50 @@ def parse_feed(content: bytes, source: str, default_board: str, tier: str) -> li
 
 
 def parse_policy_feed(content: bytes, source: str) -> list[PolicyItem]:
+    region, name = source.split("|", 1)
     return [
         PolicyItem(
+            region=region,
             title=item.title,
             link=item.link,
-            source=source,
+            source=name,
             published=item.published,
             summary_raw=item.summary_raw,
         )
         for item in parse_feed(content, source, "company", "advisory")
     ]
+
+
+def parse_policy_html_list(content: bytes, region: str, source: str, base_url: str) -> list[PolicyItem]:
+    html_text = content.decode("utf-8", errors="ignore")
+    html_text = re.sub(r"<!--.*?-->", " ", html_text, flags=re.S)
+    pattern = re.compile(
+        r"<a\b[^>]*href=[\"'](?P<link>[^\"']+)[\"'][^>]*>(?P<title>.*?)</a>"
+        r"(?P<trail>.{0,260}?(?:\d{4}[-年./]\d{1,2}[-月./]\d{1,2}|\d{1,2}[-月./]\d{1,2}))",
+        re.S,
+    )
+    items: list[PolicyItem] = []
+    for matched in pattern.finditer(html_text):
+        title = clean_text(matched.group("title"))
+        if not title or len(title) < 6:
+            continue
+        link = urllib.parse.urljoin(base_url, clean_text(matched.group("link")))
+        date_match = re.search(
+            r"\d{4}[-年./]\d{1,2}[-月./]\d{1,2}|\d{1,2}[-月./]\d{1,2}",
+            matched.group("trail"),
+        )
+        published = parse_policy_date(date_match.group(0) if date_match else "")
+        items.append(
+            PolicyItem(
+                region=region,
+                title=title,
+                link=link,
+                source=source,
+                published=published,
+                summary_raw="",
+            )
+        )
+    return items
 
 
 def parse_federal_register(payload: dict) -> list[PolicyItem]:
@@ -393,7 +524,7 @@ def parse_federal_register(payload: dict) -> list[PolicyItem]:
         summary = clean_text(str(row.get("abstract") or ""))
         published = parse_date(str(row.get("publication_date") or ""))
         if title and link:
-            items.append(PolicyItem(title, link, "Federal Register", published, summary))
+            items.append(PolicyItem("国际政策", title, link, "Federal Register", published, summary))
     return items
 
 
@@ -408,6 +539,8 @@ def classify(text: str, fallback: str) -> str:
 
 
 def has_keyword(text: str, keyword: str) -> bool:
+    if re.search(r"[\u4e00-\u9fff]", keyword):
+        return keyword in text
     return re.search(rf"\b{re.escape(keyword)}\b", text) is not None
 
 
@@ -424,7 +557,7 @@ def is_policy_relevant(item: PolicyItem, cutoff: datetime, now: datetime) -> boo
 def policy_meaning(source: str) -> str:
     lowered = source.lower()
     for key, hint in POLICY_SUMMARY_HINTS.items():
-        if key in lowered:
+        if key.lower() in lowered or key in source:
             return hint
     return "科技政策或监管动态，建议关注其对 AI 产品、数据合规、算力供应和企业部署的影响。"
 
@@ -436,14 +569,22 @@ def make_policy_what(item: PolicyItem) -> str:
     return f"发布/更新：{item.title}。" + (f" {summary}" if summary else "")
 
 
-def collect_policies(now: datetime, limit: int = 5) -> list[dict]:
-    cutoff = now - timedelta(days=7)
+def collect_policies(now: datetime, limit: int = 6) -> list[dict]:
+    cutoff = now - timedelta(days=45)
     collected: list[PolicyItem] = []
     seen: set[str] = set()
 
-    for source, url in POLICY_RSS_SOURCES:
+    for region, source, url in POLICY_RSS_SOURCES:
         try:
-            parsed = parse_policy_feed(fetch_url(url), source)
+            parsed = parse_policy_feed(fetch_url(url, allow_insecure_ssl=True), f"{region}|{source}")
+        except (ET.ParseError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            print(f"warning: failed to fetch policy source {source}: {exc}", file=sys.stderr)
+            continue
+        collected.extend(parsed[:10])
+
+    for region, source, url in CHINA_POLICY_HTML_SOURCES:
+        try:
+            parsed = parse_policy_html_list(fetch_url(url, allow_insecure_ssl=True), region, source, url)
         except (ET.ParseError, urllib.error.URLError, TimeoutError, OSError) as exc:
             print(f"warning: failed to fetch policy source {source}: {exc}", file=sys.stderr)
             continue
@@ -462,17 +603,36 @@ def collect_policies(now: datetime, limit: int = 5) -> list[dict]:
         seen.add(key)
         filtered.append(item)
 
+    filtered_region_counts: dict[str, int] = {}
+    for item in filtered:
+        filtered_region_counts[item.region] = filtered_region_counts.get(item.region, 0) + 1
+    for fallback in FALLBACK_POLICY_ITEMS:
+        if filtered_region_counts.get(fallback.region, 0) < 3 and is_policy_relevant(fallback, cutoff, now):
+            filtered.append(fallback)
+            filtered_region_counts[fallback.region] = filtered_region_counts.get(fallback.region, 0) + 1
+
     filtered.sort(key=lambda item: item.published, reverse=True)
+    selected: list[PolicyItem] = []
+    region_counts: dict[str, int] = {}
+    for item in filtered:
+        if region_counts.get(item.region, 0) >= 3:
+            continue
+        selected.append(item)
+        region_counts[item.region] = region_counts.get(item.region, 0) + 1
+        if len(selected) >= limit:
+            break
+
     return [
         {
             "title": item.title,
+            "region": item.region,
             "source": item.source,
             "what": make_policy_what(item),
             "meaning": policy_meaning(item.source),
             "published": item.published,
             "link": item.link,
         }
-        for item in filtered[:limit]
+        for item in selected
     ]
 
 
