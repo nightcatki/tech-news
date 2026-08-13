@@ -1,6 +1,6 @@
 {
   "date": "2026-08-13",
-  "generated_at": "2026-08-13T17:18:03+08:00",
+  "generated_at": "2026-08-13T17:51:18+08:00",
   "digest": "今日抓取到 24 条科技新闻。重点关注：Some Claude users are mad that Anthropic’s new watermarks will catch them using it at their jobs, classes；From assistance to execution: How enterprises put AI to work；Testing ads in ChatGPT。",
   "boards": {
     "ai": "AI 大模型",
@@ -256,7 +256,7 @@
       "summary": "Twitch users can now opt out of allowing their content to be used to train Amazon's generative AI models. Opting out means that \"your streams, VODs, clips, stream chat...",
       "summary_raw": "Twitch users can now opt out of allowing their content to be used to train Amazon's generative AI models. Opting out means that \"your streams, VODs, clips, stream chats, and pictures and text on your channel\" won't be used in \"future training\" of an Amazon AI model \"whose purpose is to generate or synthesize text, […]",
       "score": 7,
-      "published": "2026-08-13T17:18:05+08:00",
+      "published": "2026-08-13T17:51:20+08:00",
       "link": "https://www.theverge.com/tech/979112/twitch-streamers-can-now-opt-out-from-training-amazons-ai",
       "lang": "en",
       "ai": false
@@ -270,7 +270,7 @@
       "summary": "Google just added four new phones to the Pixel family: the Pixel 11, Pixel 11 Pro, Pixel 11 Pro XL, and the Pixel 11 Pro Fold. They're slightly more expensive than the...",
       "summary_raw": "Google just added four new phones to the Pixel family: the Pixel 11, Pixel 11 Pro, Pixel 11 Pro XL, and the Pixel 11 Pro Fold. They're slightly more expensive than their predecessors, but they come with some notable upgrades, including improved cameras and a new Tensor G6 chip that should deliver faster performance. The […]",
       "score": 7,
-      "published": "2026-08-13T17:18:05+08:00",
+      "published": "2026-08-13T17:51:20+08:00",
       "link": "https://www.theverge.com/gadgets/975237/google-pixel-11-pro-comparison-specs-price-features",
       "lang": "en",
       "ai": false
@@ -284,7 +284,7 @@
       "summary": "Immigration and Customs Enforcement (ICE) is aiming to spend up to $20 million on equipping officers and agents with specialized gloves that deliver painful electric s...",
       "summary_raw": "Immigration and Customs Enforcement (ICE) is aiming to spend up to $20 million on equipping officers and agents with specialized gloves that deliver painful electric shocks. These plans were outlined in a notice published by the Department of Homeland Security on Monday, with an unspecified quantity of the devices set to be delivered by March […]",
       "score": 7,
-      "published": "2026-08-13T17:18:05+08:00",
+      "published": "2026-08-13T17:51:20+08:00",
       "link": "https://www.theverge.com/policy/979010/ice-agents-electric-shock-gloves",
       "lang": "en",
       "ai": false
