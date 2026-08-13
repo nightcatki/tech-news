@@ -2,8 +2,9 @@ name: Generate daily news
 
 on:
   schedule:
-    # 07:00 Asia/Shanghai = 23:00 UTC on the previous day.
-    - cron: "0 23 * * *"
+    # 07:07 Asia/Shanghai = 23:07 UTC on the previous day.
+    # Avoiding the top of the hour reduces GitHub Actions schedule delays.
+    - cron: "7 23 * * *"
   workflow_dispatch:
 
 permissions:
