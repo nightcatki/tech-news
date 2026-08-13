@@ -28,8 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
-TRANSLATE_BATCH_SIZE = 6
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-4b:free")
+TRANSLATE_BATCH_SIZE = 4
 
 BOARDS = {
     "ai": "AI 大模型",
@@ -251,7 +251,7 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
     body = {
         "model": OPENROUTER_MODEL,
         "temperature": 0.2,
-        "max_tokens": 5000,
+        "max_tokens": 2500,
         "response_format": {"type": "json_object"},
         "messages": [
             {
@@ -272,7 +272,7 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=90) as response:
+    with urllib.request.urlopen(req, timeout=45) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return payload["choices"][0]["message"]["content"]
 
