@@ -10,6 +10,7 @@
 ├── index.html          # 移动端 PWA 单页应用
 ├── manifest.json       # 添加到手机主屏幕所需配置
 ├── icon.svg            # PWA 图标
+├── scripts/            # 每日新闻 JSON 生成脚本
 ├── data/               # 前端读取的新闻 JSON
 └── .github/workflows/  # GitHub Pages 自动发布
 ```
@@ -23,11 +24,28 @@
 
 后续接入抓取流水线后，只要持续写入 `data/` 目录，前端会自动展示最新数据。
 
+## 每日自动更新
+
+已配置 `.github/workflows/daily-news.yml`：
+
+- 每天北京时间 07:00 自动运行
+- 抓取 RSS/Atom 新闻源
+- 生成 `data/YYYY-MM-DD.json`
+- 覆盖 `data/latest.json`
+- 更新 `data/index.json`
+- 自动提交到 `main`
+- 自动重新部署 GitHub Pages
+
+手动测试：仓库 → Actions → Generate daily news → Run workflow。
+
+当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。手机端“我的”里可以填 OpenRouter Key，让浏览器打开时自动补中文摘要。
+
 ## 本地调试
 
 本地预览：
 
 ```bash
+python scripts/generate_news.py
 python -m http.server 8080
 # 手机与电脑同一局域网时，访问 http://<电脑IP>:8080
 ```
@@ -35,7 +53,8 @@ python -m http.server 8080
 ## 路线图
 
 - [x] V1：移动 PWA + GitHub Pages 发布
-- [ ] 四板块抓取 + AI 摘要 + 定时数据生成
+- [x] 四板块抓取 + 定时数据生成
+- [ ] GitHub Actions 端 AI 中文摘要
 - [ ] 每周政策流水线（国家级 + 浙江/上海）
 - [ ] 机器之心、36氪等失效 RSS 改用 HTML 抓取
 - [ ] 浏览器 Web Push 晨报推送
