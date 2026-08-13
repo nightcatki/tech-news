@@ -245,7 +245,7 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
     body = {
         "model": OPENROUTER_MODEL,
         "temperature": 0.2,
-        "max_tokens": 700,
+        "max_tokens": 5000,
         "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": prompt}],
     }
@@ -260,18 +260,33 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=45) as response:
+    with urllib.request.urlopen(req, timeout=90) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return payload["choices"][0]["message"]["content"]
 
 
-def translate_prompt(card: dict) -> str:
-    return f"""你是科技新闻编辑。处理下面这条新闻，输出严格 JSON，不要 markdown 代码块：
-{{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能的读者，只填数字）}}
+def translate_prompt(cards: list[dict]) -> str:
+    items = [
+        {
+            "id": card["id"],
+            "title": card["title"],
+            "source": card["source"],
+            "summary": (card.get("summary_raw") or card.get("summary") or "")[:600],
+        }
+        for card in cards
+    ]
+    return f"""你是科技新闻编辑。请把下面的新闻批量处理成中文，并只输出严格 JSON，不要 Markdown 代码块。
 
-标题：{card["title"]}
-来源：{card["source"]}
-摘要：{(card.get("summary_raw") or card.get("summary") or "")[:600]}"""
+输出格式：
+{{"items":[{{"id":"原 id","title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分}}]}}
+
+要求：
+- 每条输入都必须按原 id 返回一条结果。
+- summary 使用中文，避免机器翻译腔。
+- score 只填数字，面向关注 AI 大模型、3DGS、具身智能的读者评分。
+
+输入新闻：
+{json.dumps(items, ensure_ascii=False, indent=2)}"""
 
 
 def translate_cards(cards: list[dict]) -> None:
@@ -281,21 +296,29 @@ def translate_cards(cards: list[dict]) -> None:
         return
     print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.")
 
-    for idx, card in enumerate(cards, start=1):
+    by_id = {card["id"]: card for card in cards}
+    try:
+        content = openrouter_chat(api_key, translate_prompt(cards))
+        translated = extract_json_object(content)
+        if not translated or not isinstance(translated.get("items"), list):
+            raise ValueError("model did not return items JSON")
+    except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
+        print(f"warning: failed to translate batch: {exc}", file=sys.stderr)
+        return
+
+    translated_count = 0
+    for item in translated["items"]:
         try:
-            content = openrouter_chat(api_key, translate_prompt(card))
-            translated = extract_json_object(content)
-            if not translated:
-                raise ValueError("model did not return JSON")
-            card["title_zh"] = clean_text(str(translated.get("title_zh") or card["title"]))
-            card["summary"] = clean_text(str(translated.get("summary") or card["summary"]))
-            card["score"] = max(1, min(10, int(float(translated.get("score") or card["score"]))))
+            card = by_id[str(item.get("id", ""))]
+            card["title_zh"] = clean_text(str(item.get("title_zh") or card["title"]))
+            card["summary"] = clean_text(str(item.get("summary") or card["summary"]))
+            card["score"] = max(1, min(10, int(float(item.get("score") or card["score"]))))
             card["lang"] = "zh"
             card["ai"] = True
-        except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
-            print(f"warning: failed to translate {card['id']}: {exc}", file=sys.stderr)
-        if idx % 5 == 0:
-            print(f"translated {idx}/{len(cards)} items")
+            translated_count += 1
+        except (KeyError, TypeError, ValueError) as exc:
+            print(f"warning: skipped translated item: {exc}", file=sys.stderr)
+    print(f"translated {translated_count}/{len(cards)} items")
 
 
 def collect_items(limit: int) -> list[FeedItem]:
