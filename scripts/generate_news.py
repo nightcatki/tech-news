@@ -12,6 +12,7 @@ import email.utils
 import hashlib
 import html
 import json
+import os
 import re
 import sys
 import urllib.error
@@ -20,12 +21,14 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
+ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+ZHIPU_MODEL = os.getenv("ZHIPU_MODEL", "glm-4.5-flash")
 
 BOARDS = {
     "ai": "AI 大模型",
@@ -228,6 +231,70 @@ def item_id(link: str) -> str:
     return hashlib.sha1(link.encode("utf-8")).hexdigest()[:12]
 
 
+def extract_json_object(text: str) -> Optional[dict]:
+    match = re.search(r"\{[\s\S]*\}", text or "")
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return None
+
+
+def zhipu_chat(api_key: str, prompt: str) -> str:
+    body = {
+        "model": ZHIPU_MODEL,
+        "temperature": 0.2,
+        "max_tokens": 700,
+        "thinking": {"type": "disabled"},
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    req = urllib.request.Request(
+        ZHIPU_URL,
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=45) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload["choices"][0]["message"]["content"]
+
+
+def translate_prompt(card: dict) -> str:
+    return f"""你是科技新闻编辑。处理下面这条新闻，输出严格 JSON，不要 markdown 代码块：
+{{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能的读者，只填数字）}}
+
+标题：{card["title"]}
+来源：{card["source"]}
+摘要：{(card.get("summary_raw") or card.get("summary") or "")[:600]}"""
+
+
+def translate_cards(cards: list[dict]) -> None:
+    api_key = os.getenv("ZHIPU_API_KEY", "").strip()
+    if not api_key:
+        print("ZHIPU_API_KEY is not set; keeping source-language summaries.")
+        return
+
+    for idx, card in enumerate(cards, start=1):
+        try:
+            content = zhipu_chat(api_key, translate_prompt(card))
+            translated = extract_json_object(content)
+            if not translated:
+                raise ValueError("model did not return JSON")
+            card["title_zh"] = clean_text(str(translated.get("title_zh") or card["title"]))
+            card["summary"] = clean_text(str(translated.get("summary") or card["summary"]))
+            card["score"] = max(1, min(10, int(float(translated.get("score") or card["score"]))))
+            card["lang"] = "zh"
+            card["ai"] = True
+        except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            print(f"warning: failed to translate {card['id']}: {exc}", file=sys.stderr)
+        if idx % 5 == 0:
+            print(f"translated {idx}/{len(cards)} items")
+
+
 def collect_items(limit: int) -> list[FeedItem]:
     collected: list[FeedItem] = []
     seen: set[str] = set()
@@ -267,6 +334,7 @@ def build_payload(items: list[FeedItem], now: datetime) -> dict:
         }
         for item in items
     ]
+    translate_cards(cards)
     top_titles = "；".join(card["title_zh"] for card in cards[:3])
     digest = (
         f"今日抓取到 {len(cards)} 条科技新闻。重点关注：{top_titles}。"

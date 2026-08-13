@@ -31,6 +31,9 @@ jobs:
           python-version: "3.x"
 
       - name: Generate JSON
+        env:
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_MODEL: glm-4.5-flash
         run: python scripts/generate_news.py
 
       - name: Commit generated data

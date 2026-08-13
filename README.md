@@ -38,7 +38,9 @@
 
 手动测试：仓库 → Actions → Generate daily news → Run workflow。
 
-当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。手机端“我的”里可以填 OpenRouter Key，让浏览器打开时自动补中文摘要。
+当前生成脚本使用标准库实现，不需要安装依赖；无 AI Key 时会展示英文标题和源站摘要。配置智谱 GLM Key 后，GitHub Actions 会在生成 JSON 时直接写入中文标题和摘要。
+
+配置方式：仓库 → Settings → Secrets and variables → Actions → New repository secret，Name 填 `ZHIPU_API_KEY`，Secret 粘贴智谱开放平台 API Key。也可以在手机端“我的”里填智谱 Key，让浏览器打开时自动补中文摘要。
 
 ## 本地调试
 
@@ -54,7 +56,7 @@ python -m http.server 8080
 
 - [x] V1：移动 PWA + GitHub Pages 发布
 - [x] 四板块抓取 + 定时数据生成
-- [ ] GitHub Actions 端 AI 中文摘要
+- [x] GitHub Actions 端智谱 GLM 中文摘要
 - [ ] 每周政策流水线（国家级 + 浙江/上海）
 - [ ] 机器之心、36氪等失效 RSS 改用 HTML 抓取
 - [ ] 浏览器 Web Push 晨报推送

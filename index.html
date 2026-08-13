@@ -224,14 +224,14 @@ function renderAbout(){
 
     <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;
          padding:16px;margin-bottom:18px">
-      <div style="font-weight:600;margin-bottom:4px">DeepSeek 翻译 Key</div>
+      <div style="font-weight:600;margin-bottom:4px">智谱 GLM 翻译 Key</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-        填入 OpenRouter 免费 Key 后，打开 App 会自动把未翻译的新闻转成中文摘要。<br>
-        免费获取：<a href="https://openrouter.ai/keys" target="_blank"
-        style="color:var(--accent)">openrouter.ai/keys</a>（注册即得，无需付费）
+        填入智谱开放平台 API Key 后，打开 App 会自动把未翻译的新闻转成中文摘要。<br>
+        获取地址：<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank"
+        style="color:var(--accent)">bigmodel.cn API Keys</a>
       </div>
       <div style="display:flex;gap:8px">
-        <input id="keyInput" type="password" placeholder="sk-or-v1-..." value="${key}"
+        <input id="keyInput" type="password" placeholder="请输入智谱 API Key" value="${key}"
           style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:8px;
           padding:9px 12px;color:var(--text);font-size:13px;outline:none;min-width:0">
         <button id="saveKey" class="btn primary" style="flex-shrink:0">保存</button>
@@ -250,30 +250,31 @@ function renderAbout(){
   $('#saveKey').onclick = ()=>{
     const v = $('#keyInput').value.trim();
     if(!v) return;
-    localStorage.setItem('or_key', v);
+    localStorage.setItem('zhipu_key', v);
     renderAbout();
     translatePending();  // 保存后立即开始翻译
   };
   const clr = $('#clearKey');
   if(clr) clr.onclick = ()=>{
-    localStorage.removeItem('or_key');
+    localStorage.removeItem('zhipu_key');
     localStorage.removeItem('trans_cache');
     renderAbout();
   };
 }
 
-/* ---------- 浏览器端 DeepSeek 翻译 ---------- */
-const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL = 'deepseek/deepseek-chat-v3.1:free';
-const getKey = ()=> localStorage.getItem('or_key') || '';
+/* ---------- 浏览器端智谱 GLM 翻译 ---------- */
+const GLM_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+const GLM_MODEL = 'glm-4.5-flash';
+const getKey = ()=> localStorage.getItem('zhipu_key') || '';
 const getCache = ()=> JSON.parse(localStorage.getItem('trans_cache')||'{}');
 const setCache = c => localStorage.setItem('trans_cache', JSON.stringify(c));
 
-async function orChat(prompt){
-  const r = await fetch(OR_URL, {
+async function glmChat(prompt){
+  const r = await fetch(GLM_URL, {
     method:'POST',
     headers:{ 'Authorization':'Bearer '+getKey(), 'Content-Type':'application/json' },
-    body: JSON.stringify({ model:OR_MODEL, temperature:0.3,
+    body: JSON.stringify({ model:GLM_MODEL, temperature:0.2, max_tokens:700,
+      thinking:{type:'disabled'},
       messages:[{role:'user', content:prompt}] })
   });
   if(r.status === 429) throw new Error('rate_limit');
@@ -296,11 +297,11 @@ async function translatePending(){
   const cache = getCache();
   const pending = state.data.items.filter(it => !it.ai && !cache[it.id]);
   if(!pending.length) return;
-  showToast(`正在用 DeepSeek 翻译 ${pending.length} 条新闻…`);
+  showToast(`正在用智谱 GLM 翻译 ${pending.length} 条新闻…`);
   let done = 0;
   for(const it of pending){
     try{
-      const resp = await orChat(translatePrompt(it));
+      const resp = await glmChat(translatePrompt(it));
       const m = resp.match(/\{[\s\S]*\}/);
       if(m){
         const r = JSON.parse(m[0]);
