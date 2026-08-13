@@ -12,7 +12,6 @@ import email.utils
 import hashlib
 import html
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -21,34 +20,51 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
-TRANSLATE_BATCH_SIZE = 4
 
 BOARDS = {
     "ai": "AI 大模型",
     "3dgs": "3DGS",
     "embodied": "具身智能",
     "company": "产品与公司",
+    "dev": "开发者工具",
+    "infra": "算力与云",
+    "security": "安全漏洞",
+}
+
+SOURCE_TIER_SCORE = {
+    "primary": 3,
+    "research": 1,
+    "advisory": 2,
+    "media": -2,
 }
 
 SOURCES = [
-    ("OpenAI Blog", "ai", "https://openai.com/news/rss.xml"),
-    ("Google DeepMind", "ai", "https://deepmind.google/blog/rss.xml"),
-    ("Google AI", "ai", "https://blog.google/technology/ai/rss/"),
-    ("Hugging Face Blog", "ai", "https://huggingface.co/blog/feed.xml"),
-    ("arXiv cs.AI", "ai", "https://export.arxiv.org/rss/cs.AI"),
-    ("arXiv cs.CL", "ai", "https://export.arxiv.org/rss/cs.CL"),
-    ("arXiv cs.CV", "3dgs", "https://export.arxiv.org/rss/cs.CV"),
-    ("arXiv cs.RO", "embodied", "https://export.arxiv.org/rss/cs.RO"),
-    ("TechCrunch", "company", "https://techcrunch.com/feed/"),
-    ("The Verge", "company", "https://www.theverge.com/rss/index.xml"),
+    # A tier: official announcements, changelogs, and first-party research.
+    ("OpenAI News", "ai", "https://openai.com/news/rss.xml", "primary", 12),
+    ("Google DeepMind", "ai", "https://deepmind.google/blog/rss.xml", "primary", 10),
+    ("Google AI", "ai", "https://blog.google/technology/ai/rss/", "primary", 10),
+    ("Hugging Face Blog", "ai", "https://huggingface.co/blog/feed.xml", "primary", 8),
+    ("NVIDIA Blog", "infra", "https://blogs.nvidia.com/feed/", "primary", 8),
+    ("NVIDIA Developer", "infra", "https://developer.nvidia.com/blog/feed/", "primary", 8),
+    ("GitHub Changelog", "dev", "https://github.blog/changelog/feed/", "primary", 10),
+    ("AWS News Blog", "infra", "https://aws.amazon.com/blogs/aws/feed/", "primary", 8),
+    ("Microsoft Dev Blogs", "dev", "https://devblogs.microsoft.com/feed/", "primary", 8),
+    ("GitHub Security Blog", "security", "https://github.blog/security/feed/", "primary", 8),
+    ("CISA Advisories", "security", "https://www.cisa.gov/cybersecurity-advisories/all.xml", "advisory", 8),
+    # B tier: useful research feeds, but noisier than official announcements.
+    ("arXiv cs.AI", "ai", "https://export.arxiv.org/rss/cs.AI", "research", 6),
+    ("arXiv cs.CL", "ai", "https://export.arxiv.org/rss/cs.CL", "research", 6),
+    ("arXiv cs.CV", "3dgs", "https://export.arxiv.org/rss/cs.CV", "research", 6),
+    ("arXiv cs.RO", "embodied", "https://export.arxiv.org/rss/cs.RO", "research", 6),
+    # C tier: media is kept only as a backup signal.
+    ("TechCrunch", "company", "https://techcrunch.com/feed/", "media", 4),
+    ("The Verge", "company", "https://www.theverge.com/rss/index.xml", "media", 4),
 ]
 
 KEYWORDS = {
@@ -98,7 +114,75 @@ KEYWORDS = {
         "release",
         "startup",
     ],
+    "dev": [
+        "api",
+        "changelog",
+        "cli",
+        "codex",
+        "copilot",
+        "developer",
+        "github",
+        "release",
+        "sdk",
+        "typescript",
+    ],
+    "infra": [
+        "aws",
+        "azure",
+        "cloud",
+        "cuda",
+        "gpu",
+        "inference",
+        "nvidia",
+        "training",
+    ],
+    "security": [
+        "advisory",
+        "attack",
+        "breach",
+        "cisa",
+        "cve",
+        "exploit",
+        "malware",
+        "patch",
+        "security",
+        "vulnerability",
+    ],
 }
+
+IMPORTANT_TERMS = [
+    "announces",
+    "available",
+    "breakthrough",
+    "changelog",
+    "critical",
+    "cve",
+    "developer preview",
+    "general availability",
+    "introducing",
+    "launch",
+    "new model",
+    "open source",
+    "preview",
+    "release",
+    "research",
+    "security",
+]
+
+LOW_SIGNAL_TERMS = [
+    "best ceo",
+    "ceo tops",
+    "deal",
+    "discount",
+    "glassdoor",
+    "hands-on",
+    "opinion",
+    "ranked",
+    "rumor",
+    "sale",
+    "some users",
+    "trailer",
+]
 
 
 @dataclass
@@ -109,6 +193,7 @@ class FeedItem:
     board: str
     published: str
     summary_raw: str
+    tier: str
 
 
 def clean_text(value: str) -> str:
@@ -156,7 +241,7 @@ def atom_link(node: ET.Element) -> str:
     return ""
 
 
-def parse_feed(content: bytes, source: str, default_board: str) -> list[FeedItem]:
+def parse_feed(content: bytes, source: str, default_board: str, tier: str) -> list[FeedItem]:
     root = ET.fromstring(content)
     items: list[FeedItem] = []
 
@@ -169,7 +254,7 @@ def parse_feed(content: bytes, source: str, default_board: str) -> list[FeedItem
         published = parse_date(child_text(item, ["pubDate", "published", "updated"]))
         if title and link:
             board = classify(title + " " + summary, default_board)
-            items.append(FeedItem(title, link, source, board, published, summary))
+            items.append(FeedItem(title, link, source, board, published, summary, tier))
 
     for item in atom_items:
         title = clean_text(child_text(item, ["{http://www.w3.org/2005/Atom}title"]))
@@ -194,7 +279,7 @@ def parse_feed(content: bytes, source: str, default_board: str) -> list[FeedItem
         )
         if title and link:
             board = classify(title + " " + summary, default_board)
-            items.append(FeedItem(title, link, source, board, published, summary))
+            items.append(FeedItem(title, link, source, board, published, summary, tier))
 
     return items
 
@@ -212,10 +297,16 @@ def classify(text: str, fallback: str) -> str:
 def score_item(item: FeedItem) -> int:
     text = f"{item.title} {item.summary_raw}".lower()
     score = 5
+    score += SOURCE_TIER_SCORE.get(item.tier, 0)
     score += min(3, sum(1 for kw in KEYWORDS.get(item.board, []) if kw in text))
-    if any(kw in text for kw in ["openai", "anthropic", "deepmind", "google", "nvidia"]):
-        score += 1
-    if item.source.startswith("arXiv"):
+    score += min(2, sum(1 for term in IMPORTANT_TERMS if term in text))
+    if any(kw in text for kw in ["openai", "anthropic", "claude", "deepmind", "google", "nvidia"]):
+        score += 1 if item.tier != "media" else 0
+    if any(term in text for term in LOW_SIGNAL_TERMS):
+        score -= 2
+    if item.source == "NVIDIA Blog" and any(term in text for term in ["ceo", "glassdoor"]):
+        score -= 4
+    if item.tier == "research":
         score -= 1
     return max(1, min(10, score))
 
@@ -228,166 +319,31 @@ def make_summary(item: FeedItem) -> str:
     return summary
 
 
+def make_detail(item: FeedItem) -> str:
+    if score_item(item) < 8:
+        return ""
+    detail = clean_text(item.summary_raw or item.title)
+    if not detail:
+        return ""
+    if len(detail) > 420:
+        detail = detail[:417].rstrip() + "..."
+    return detail
+
+
 def item_id(link: str) -> str:
     return hashlib.sha1(link.encode("utf-8")).hexdigest()[:12]
-
-
-def extract_json_object(text: str) -> Optional[dict]:
-    decoder = json.JSONDecoder()
-    value = text or ""
-    for idx, char in enumerate(value):
-        if char != "{":
-            continue
-        try:
-            parsed, _ = decoder.raw_decode(value[idx:])
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            return parsed
-    return None
-
-
-def openrouter_chat(api_key: str, prompt: str) -> str:
-    body = {
-        "model": OPENROUTER_MODEL,
-        "temperature": 0.2,
-        "max_tokens": 2500,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "translated_news",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "items": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "title_zh": {"type": "string"},
-                                    "summary": {"type": "string"},
-                                    "score": {"type": "number"},
-                                },
-                                "required": ["id", "title_zh", "summary", "score"],
-                                "additionalProperties": False,
-                            },
-                        }
-                    },
-                    "required": ["items"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        "messages": [
-            {
-                "role": "system",
-                "content": "You output valid JSON only. Do not include explanations, code fences, or reasoning text.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-    }
-    req = urllib.request.Request(
-        OPENROUTER_URL,
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://nightcatki.github.io/tech-news/",
-            "X-Title": "Tech News Workbench",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=45) as response:
-        payload = json.loads(response.read().decode("utf-8"))
-    return payload["choices"][0]["message"]["content"]
-
-
-def http_error_detail(exc: urllib.error.HTTPError) -> str:
-    try:
-        body = exc.read().decode("utf-8", errors="replace")
-    except OSError:
-        body = ""
-    body = re.sub(r"\s+", " ", body).strip()
-    return f"HTTP {exc.code}: {body[:300]}" if body else f"HTTP {exc.code}: {exc.reason}"
-
-
-def translate_prompt(cards: list[dict]) -> str:
-    items = [
-        {
-            "id": card["id"],
-            "title": card["title"],
-            "source": card["source"],
-            "summary": (card.get("summary_raw") or card.get("summary") or "")[:600],
-        }
-        for card in cards
-    ]
-    return f"""你是科技新闻编辑。请把下面的新闻批量处理成中文，并只输出严格 JSON，不要 Markdown 代码块。
-
-输出格式：
-{{"items":[{{"id":"原 id","title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分}}]}}
-
-要求：
-- 每条输入都必须按原 id 返回一条结果。
-- summary 使用中文，避免机器翻译腔。
-- score 只填数字，面向关注 AI 大模型、3DGS、具身智能的读者评分。
-
-输入新闻：
-{json.dumps(items, ensure_ascii=False, indent=2)}"""
-
-
-def translate_cards(cards: list[dict]) -> None:
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        print("OPENROUTER_API_KEY is not set; keeping source-language summaries.")
-        return
-    print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.", flush=True)
-
-    translated_count = 0
-    for start in range(0, len(cards), TRANSLATE_BATCH_SIZE):
-        batch = cards[start : start + TRANSLATE_BATCH_SIZE]
-        by_id = {card["id"]: card for card in batch}
-        try:
-            content = openrouter_chat(api_key, translate_prompt(batch))
-            translated = extract_json_object(content)
-            if not translated or not isinstance(translated.get("items"), list):
-                raise ValueError("model did not return items JSON")
-        except urllib.error.HTTPError as exc:
-            print(
-                f"warning: failed to translate batch {start + 1}: {http_error_detail(exc)}",
-                file=sys.stderr,
-                flush=True,
-            )
-            continue
-        except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:
-            print(f"warning: failed to translate batch {start + 1}: {exc}", file=sys.stderr)
-            continue
-
-        for item in translated["items"]:
-            try:
-                card = by_id[str(item.get("id", ""))]
-                card["title_zh"] = clean_text(str(item.get("title_zh") or card["title"]))
-                card["summary"] = clean_text(str(item.get("summary") or card["summary"]))
-                card["score"] = max(1, min(10, int(float(item.get("score") or card["score"]))))
-                card["lang"] = "zh"
-                card["ai"] = True
-                translated_count += 1
-            except (KeyError, TypeError, ValueError) as exc:
-                print(f"warning: skipped translated item: {exc}", file=sys.stderr)
-    print(f"translated {translated_count}/{len(cards)} items")
 
 
 def collect_items(limit: int) -> list[FeedItem]:
     collected: list[FeedItem] = []
     seen: set[str] = set()
-    for source, board, url in SOURCES:
+    for source, board, url, tier, per_feed_limit in SOURCES:
         try:
-            parsed = parse_feed(fetch_url(url), source, board)
+            parsed = parse_feed(fetch_url(url), source, board, tier)
         except (ET.ParseError, urllib.error.URLError, TimeoutError, OSError) as exc:
             print(f"warning: failed to fetch {source}: {exc}", file=sys.stderr)
             continue
-        for item in parsed[:12]:
+        for item in parsed[:per_feed_limit]:
             key = item.link.split("?")[0]
             if key in seen:
                 continue
@@ -395,7 +351,28 @@ def collect_items(limit: int) -> list[FeedItem]:
             collected.append(item)
 
     collected.sort(key=lambda item: (score_item(item), item.published), reverse=True)
-    return collected[:limit]
+    selected: list[FeedItem] = []
+    source_counts: dict[str, int] = {}
+    tier_counts: dict[str, int] = {}
+    tier_caps = {"media": 3, "research": 7}
+    source_caps = {
+        "NVIDIA Developer": 3,
+        "NVIDIA Blog": 2,
+        "GitHub Changelog": 4,
+    }
+
+    for item in collected:
+        if source_counts.get(item.source, 0) >= source_caps.get(item.source, 5):
+            continue
+        if tier_counts.get(item.tier, 0) >= tier_caps.get(item.tier, limit):
+            continue
+        selected.append(item)
+        source_counts[item.source] = source_counts.get(item.source, 0) + 1
+        tier_counts[item.tier] = tier_counts.get(item.tier, 0) + 1
+        if len(selected) >= limit:
+            break
+
+    return selected
 
 
 def build_payload(items: list[FeedItem], now: datetime) -> dict:
@@ -408,8 +385,10 @@ def build_payload(items: list[FeedItem], now: datetime) -> dict:
             "title": item.title,
             "title_zh": item.title,
             "summary": make_summary(item),
+            "detail": make_detail(item),
             "summary_raw": item.summary_raw,
             "score": score_item(item),
+            "tier": item.tier,
             "published": item.published,
             "link": item.link,
             "lang": "en",
@@ -417,7 +396,6 @@ def build_payload(items: list[FeedItem], now: datetime) -> dict:
         }
         for item in items
     ]
-    translate_cards(cards)
     top_titles = "；".join(card["title_zh"] for card in cards[:3])
     digest = (
         f"今日抓取到 {len(cards)} 条科技新闻。重点关注：{top_titles}。"

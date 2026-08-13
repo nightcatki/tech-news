@@ -56,11 +56,17 @@ header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(
 .badge.\33 dgs{background:#a855f733;color:#d8b4fe}
 .badge.embodied{background:#22c55e33;color:#86efac}
 .badge.company{background:#f9731633;color:#fdba74}
+.badge.dev{background:#14b8a633;color:#5eead4}
+.badge.infra{background:#6366f133;color:#a5b4fc}
+.badge.security{background:#ef444433;color:#fca5a5}
 .score{margin-left:auto;font-size:11px;color:var(--muted)}
 .score.hot{color:#f87171;font-weight:700}
 .card h3{font-size:15px;line-height:1.5;margin-bottom:6px}
 .card h3 .orig{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:3px}
 .card .c-sum{font-size:13px;color:#b8c2d0;line-height:1.7;margin-bottom:10px}
+.card .c-detail{font-size:12px;color:#cbd5e1;line-height:1.75;margin:8px 0 12px;
+  padding:10px 12px;border-left:2px solid var(--accent);background:#0f172a66;border-radius:8px}
+.card .c-detail b{display:block;color:#7dd3fc;font-size:11px;margin-bottom:4px}
 .card .c-foot{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)}
 .card .c-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .btn{font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--line);
@@ -108,7 +114,8 @@ const $ = s => document.querySelector(s);
 const state = { data:null, dates:[], dateIdx:0, tab:'all', view:'feed',
   favs: JSON.parse(localStorage.getItem('favs')||'[]') };
 
-const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company' };
+const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company',
+  dev:'dev', infra:'infra', security:'security' };
 const dataUrl = path => `${path}?v=${Date.now()}`;
 const fetchJson = path => fetch(dataUrl(path), { cache:'no-store' }).then(r=>{
   if(!r.ok) throw new Error(`http_${r.status}`);
@@ -191,6 +198,7 @@ function render(){
       </div>
       <h3 id="t-${it.id}">${it.title_zh}${isZh?'':`<span class="orig">${it.title}</span>`}</h3>
       <div class="c-sum" id="s-${it.id}">${it.summary}</div>
+      ${it.detail?`<div class="c-detail" id="d-${it.id}"><b>重点解读</b>${it.detail}</div>`:''}
       <div class="c-foot">
         <span>${(it.published||'').slice(5,16).replace('T',' ')}</span>
         <div class="c-actions">
@@ -215,6 +223,7 @@ function renderFavs(){
     favItems.map(it=>`
       <div class="card"><h3>${it.title_zh}</h3>
       <div class="c-sum">${it.summary}</div>
+      ${it.detail?`<div class="c-detail"><b>重点解读</b>${it.detail}</div>`:''}
       <div class="c-foot"><span>${it.source}</span>
       <div class="c-actions">
         <button class="btn" data-translate="${it.id}" ${it.ai?'disabled':''}>${it.ai?'已翻译':'翻译'}</button>
@@ -322,11 +331,11 @@ async function aiChat(prompt){
 
 function translatePrompt(it){
   return `你是科技新闻编辑。处理下面这条新闻，输出严格 JSON（不要 markdown 代码块）：
-{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能的读者，只填数字）}
+{"title_zh":"中文标题（如原文已是中文则原样保留）","summary":"100字以内的中文摘要，讲清发生了什么、为什么重要","detail":"如果这是重要新闻，写180字以内中文重点解读：背景、变化、影响；普通新闻可为空字符串","score":1到10的重要性评分（面向关注AI大模型/3DGS/具身智能/开发者工具/安全的读者，只填数字）}
 
 标题：${it.title}
 来源：${it.source}
-摘要：${(it.summary_raw||'').slice(0,400)}`;
+摘要：${(it.summary_raw||it.summary||'').slice(0,800)}`;
 }
 
 async function translateOne(id, button){
@@ -351,6 +360,7 @@ async function translateOne(id, button){
     cache[it.id] = {
       title_zh: parsed.title_zh || it.title,
       summary: parsed.summary || it.summary,
+      detail: parsed.detail || it.detail || '',
       score: Number(parsed.score) || it.score
     };
     setCache(cache);
@@ -383,8 +393,10 @@ function applyTranslation(it, t){
   Object.assign(it, t, {ai:true});
   const h = document.getElementById('t-'+it.id);
   const s = document.getElementById('s-'+it.id);
+  const d = document.getElementById('d-'+it.id);
   if(h) h.innerHTML = `${it.title_zh}<span class="orig">${it.title}</span>`;
   if(s) s.textContent = it.summary;
+  if(d) d.innerHTML = `<b>重点解读</b>${it.detail || ''}`;
   const b = document.querySelector(`[data-translate="${it.id}"]`);
   if(b){ b.textContent = '已翻译'; b.disabled = true; }
 }
