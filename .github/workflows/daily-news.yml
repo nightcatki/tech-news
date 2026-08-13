@@ -32,8 +32,8 @@ jobs:
 
       - name: Generate JSON
         env:
-          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
-          ZHIPU_MODEL: glm-4.5-flash
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: openrouter/free
         run: python scripts/generate_news.py
 
       - name: Commit generated data

@@ -27,8 +27,8 @@ from typing import Iterable, Optional
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
-ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-ZHIPU_MODEL = os.getenv("ZHIPU_MODEL", "glm-4.5-flash")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
 
 BOARDS = {
     "ai": "AI 大模型",
@@ -241,20 +241,22 @@ def extract_json_object(text: str) -> Optional[dict]:
         return None
 
 
-def zhipu_chat(api_key: str, prompt: str) -> str:
+def openrouter_chat(api_key: str, prompt: str) -> str:
     body = {
-        "model": ZHIPU_MODEL,
+        "model": OPENROUTER_MODEL,
         "temperature": 0.2,
         "max_tokens": 700,
-        "thinking": {"type": "disabled"},
+        "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": prompt}],
     }
     req = urllib.request.Request(
-        ZHIPU_URL,
+        OPENROUTER_URL,
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "HTTP-Referer": "https://nightcatki.github.io/tech-news/",
+            "X-Title": "Tech News Workbench",
         },
         method="POST",
     )
@@ -273,14 +275,15 @@ def translate_prompt(card: dict) -> str:
 
 
 def translate_cards(cards: list[dict]) -> None:
-    api_key = os.getenv("ZHIPU_API_KEY", "").strip()
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not api_key:
-        print("ZHIPU_API_KEY is not set; keeping source-language summaries.")
+        print("OPENROUTER_API_KEY is not set; keeping source-language summaries.")
         return
+    print(f"Translating with OpenRouter model {OPENROUTER_MODEL}.")
 
     for idx, card in enumerate(cards, start=1):
         try:
-            content = zhipu_chat(api_key, translate_prompt(card))
+            content = openrouter_chat(api_key, translate_prompt(card))
             translated = extract_json_object(content)
             if not translated:
                 raise ValueError("model did not return JSON")
@@ -289,7 +292,7 @@ def translate_cards(cards: list[dict]) -> None:
             card["score"] = max(1, min(10, int(float(translated.get("score") or card["score"]))))
             card["lang"] = "zh"
             card["ai"] = True
-        except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (KeyError, ValueError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
             print(f"warning: failed to translate {card['id']}: {exc}", file=sys.stderr)
         if idx % 5 == 0:
             print(f"translated {idx}/{len(cards)} items")

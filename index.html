@@ -224,14 +224,14 @@ function renderAbout(){
 
     <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;
          padding:16px;margin-bottom:18px">
-      <div style="font-weight:600;margin-bottom:4px">智谱 GLM 翻译 Key</div>
+      <div style="font-weight:600;margin-bottom:4px">OpenRouter 免费模型 Key</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-        填入智谱开放平台 API Key 后，打开 App 会自动把未翻译的新闻转成中文摘要。<br>
-        获取地址：<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank"
-        style="color:var(--accent)">bigmodel.cn API Keys</a>
+        填入 OpenRouter API Key 后，打开 App 会尝试调用免费模型把未翻译新闻转成中文摘要。更推荐把 Key 配到 GitHub Secrets，每天生成时直接写入中文。<br>
+        获取地址：<a href="https://openrouter.ai/settings/keys" target="_blank"
+        style="color:var(--accent)">openrouter.ai/settings/keys</a>
       </div>
       <div style="display:flex;gap:8px">
-        <input id="keyInput" type="password" placeholder="请输入智谱 API Key" value="${key}"
+        <input id="keyInput" type="password" placeholder="sk-or-v1-..." value="${key}"
           style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:8px;
           padding:9px 12px;color:var(--text);font-size:13px;outline:none;min-width:0">
         <button id="saveKey" class="btn primary" style="flex-shrink:0">保存</button>
@@ -250,32 +250,38 @@ function renderAbout(){
   $('#saveKey').onclick = ()=>{
     const v = $('#keyInput').value.trim();
     if(!v) return;
-    localStorage.setItem('zhipu_key', v);
+    localStorage.setItem('or_key', v);
     renderAbout();
     translatePending();  // 保存后立即开始翻译
   };
   const clr = $('#clearKey');
   if(clr) clr.onclick = ()=>{
-    localStorage.removeItem('zhipu_key');
+    localStorage.removeItem('or_key');
     localStorage.removeItem('trans_cache');
     renderAbout();
   };
 }
 
-/* ---------- 浏览器端智谱 GLM 翻译 ---------- */
-const GLM_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const GLM_MODEL = 'glm-4.5-flash';
-const getKey = ()=> localStorage.getItem('zhipu_key') || '';
+/* ---------- 浏览器端 OpenRouter 免费模型翻译 ---------- */
+const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OR_MODEL = 'openrouter/free';
+const getKey = ()=> localStorage.getItem('or_key') || '';
 const getCache = ()=> JSON.parse(localStorage.getItem('trans_cache')||'{}');
 const setCache = c => localStorage.setItem('trans_cache', JSON.stringify(c));
 
-async function glmChat(prompt){
-  const r = await fetch(GLM_URL, {
+async function orChat(prompt){
+  const body = { model:OR_MODEL, temperature:0.2, max_tokens:700,
+    response_format:{type:'json_object'},
+    messages:[{role:'user', content:prompt}] };
+  const r = await fetch(OR_URL, {
     method:'POST',
-    headers:{ 'Authorization':'Bearer '+getKey(), 'Content-Type':'application/json' },
-    body: JSON.stringify({ model:GLM_MODEL, temperature:0.2, max_tokens:700,
-      thinking:{type:'disabled'},
-      messages:[{role:'user', content:prompt}] })
+    headers:{
+      'Authorization':'Bearer '+getKey(),
+      'Content-Type':'application/json',
+      'HTTP-Referer':'https://nightcatki.github.io/tech-news/',
+      'X-Title':'Tech News Workbench'
+    },
+    body: JSON.stringify(body)
   });
   if(r.status === 429) throw new Error('rate_limit');
   if(!r.ok) throw new Error('http_'+r.status);
@@ -297,11 +303,11 @@ async function translatePending(){
   const cache = getCache();
   const pending = state.data.items.filter(it => !it.ai && !cache[it.id]);
   if(!pending.length) return;
-  showToast(`正在用智谱 GLM 翻译 ${pending.length} 条新闻…`);
+  showToast(`正在用 OpenRouter 免费模型翻译 ${pending.length} 条新闻…`);
   let done = 0;
   for(const it of pending){
     try{
-      const resp = await glmChat(translatePrompt(it));
+      const resp = await orChat(translatePrompt(it));
       const m = resp.match(/\{[\s\S]*\}/);
       if(m){
         const r = JSON.parse(m[0]);
