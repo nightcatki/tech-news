@@ -253,7 +253,6 @@ def openrouter_chat(api_key: str, prompt: str) -> str:
         "temperature": 0.2,
         "max_tokens": 5000,
         "response_format": {"type": "json_object"},
-        "reasoning": {"enabled": False},
         "messages": [
             {
                 "role": "system",
