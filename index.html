@@ -94,6 +94,7 @@ nav a.active{color:var(--accent);font-weight:600}
       <button id="prevDay" aria-label="前一天">‹</button>
       <span id="dateLabel">今天</span>
       <button id="nextDay" disabled aria-label="后一天">›</button>
+      <button id="refreshData" aria-label="刷新">刷新</button>
     </div>
   </div>
 </header>
@@ -112,7 +113,7 @@ nav a.active{color:var(--accent);font-weight:600}
 const $ = s => document.querySelector(s);
 const state = { data:null, dates:[], dateIdx:0, tab:'all', view:'feed',
   favs: JSON.parse(localStorage.getItem('favs')||'[]'),
-  originalView: {} };
+  originalView: {}, autoSyncTimer:null };
 
 const BOARD_CLASS = { ai:'ai', '3dgs':'3dgs', embodied:'embodied', company:'company' };
 const dataUrl = path => `${path}?v=${Date.now()}`;
@@ -129,18 +130,52 @@ async function init(){
     $('#app').innerHTML = '<div class="empty">数据加载失败，请稍后重试</div>';
   }
   bindNav();
+  startAutoSync();
 }
 
 async function loadDate(date){
   const file = date === 'latest' ? 'latest' : date;
   state.data = await fetchJson(`data/${file}.json`);
   state.dateIdx = Math.max(0, state.dates.indexOf(date));
-  // 应用已缓存的翻译
+  applyCachedTranslations();
+  render();
+}
+
+function applyCachedTranslations(){
+  if(!state.data || !state.data.items) return;
   const cache = getCache();
   for(const it of state.data.items){
     if(cache[it.id]) it.trans = cache[it.id];
   }
-  render();
+}
+
+async function refreshLatest(silent=false){
+  try{
+    const latest = await fetchJson('data/latest.json');
+    const currentKey = state.data ? `${state.data.date}|${state.data.generated_at}` : '';
+    const latestKey = `${latest.date}|${latest.generated_at}`;
+    if(currentKey !== latestKey){
+      state.data = latest;
+      if(!state.dates.includes(latest.date)) state.dates.push(latest.date);
+      state.dates = [...new Set(state.dates)].sort();
+      state.dateIdx = state.dates.indexOf(latest.date);
+      applyCachedTranslations();
+      render();
+      showToast('已同步最新数据');
+    }else if(!silent){
+      showToast('已经是最新数据');
+    }
+  }catch(e){
+    if(!silent) showToast('刷新失败：' + friendlyError(e));
+  }
+}
+
+function startAutoSync(){
+  clearInterval(state.autoSyncTimer);
+  state.autoSyncTimer = setInterval(()=>refreshLatest(true), 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden) refreshLatest(true);
+  });
 }
 
 function fmtDate(d){
@@ -462,6 +497,7 @@ function bindNav(){
   });
   $('#prevDay').onclick = ()=>{ if(state.dateIdx>0) loadDate(state.dates[state.dateIdx-1]); };
   $('#nextDay').onclick = ()=>{ if(state.dateIdx<state.dates.length-1) loadDate(state.dates[state.dateIdx+1]); };
+  $('#refreshData').onclick = ()=>refreshLatest(false);
 }
 
 init();
