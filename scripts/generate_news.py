@@ -676,7 +676,32 @@ def item_id(link: str) -> str:
     return hashlib.sha1(link.encode("utf-8")).hexdigest()[:12]
 
 
-def collect_items(limit: int) -> list[FeedItem]:
+def normalized_link(link: str) -> str:
+    return link.split("?")[0].rstrip("/")
+
+
+def recent_history_links(current_date: str, days: int = 7) -> set[str]:
+    index_path = DATA_DIR / "index.json"
+    try:
+        dates = json.loads(index_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        dates = []
+
+    previous_dates = [date for date in dates if date != current_date][-days:]
+    links: set[str] = set()
+    for date in previous_dates:
+        try:
+            payload = json.loads((DATA_DIR / f"{date}.json").read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for item in payload.get("items", []):
+            link = str(item.get("link") or "")
+            if link:
+                links.add(normalized_link(link))
+    return links
+
+
+def collect_items(limit: int, current_date: str) -> list[FeedItem]:
     collected: list[FeedItem] = []
     seen: set[str] = set()
     for source, board, url, tier, per_feed_limit in SOURCES:
@@ -686,13 +711,14 @@ def collect_items(limit: int) -> list[FeedItem]:
             print(f"warning: failed to fetch {source}: {exc}", file=sys.stderr)
             continue
         for item in parsed[:per_feed_limit]:
-            key = item.link.split("?")[0]
+            key = normalized_link(item.link)
             if key in seen:
                 continue
             seen.add(key)
             collected.append(item)
 
     collected.sort(key=lambda item: (score_item(item), item.published), reverse=True)
+    history_links = recent_history_links(current_date)
     selected: list[FeedItem] = []
     source_counts: dict[str, int] = {}
     tier_counts: dict[str, int] = {}
@@ -703,16 +729,34 @@ def collect_items(limit: int) -> list[FeedItem]:
         "GitHub Changelog": 4,
     }
 
-    for item in collected:
+    def can_take(item: FeedItem) -> bool:
         if source_counts.get(item.source, 0) >= source_caps.get(item.source, 5):
-            continue
+            return False
         if tier_counts.get(item.tier, 0) >= tier_caps.get(item.tier, limit):
-            continue
+            return False
+        return True
+
+    def take(item: FeedItem) -> None:
         selected.append(item)
         source_counts[item.source] = source_counts.get(item.source, 0) + 1
         tier_counts[item.tier] = tier_counts.get(item.tier, 0) + 1
+
+    for item in collected:
+        if normalized_link(item.link) in history_links or not can_take(item):
+            continue
+        take(item)
         if len(selected) >= limit:
             break
+
+    if len(selected) < limit:
+        selected_keys = {normalized_link(item.link) for item in selected}
+        for item in collected:
+            if normalized_link(item.link) in selected_keys or not can_take(item):
+                continue
+            take(item)
+            selected_keys.add(normalized_link(item.link))
+            if len(selected) >= limit:
+                break
 
     return selected
 
@@ -777,7 +821,8 @@ def main() -> int:
 
     DATA_DIR.mkdir(exist_ok=True)
     now = datetime.now(TZ)
-    payload = build_payload(collect_items(args.limit), now)
+    date = now.date().isoformat()
+    payload = build_payload(collect_items(args.limit, date), now)
     date = payload["date"]
 
     text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"

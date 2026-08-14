@@ -305,6 +305,7 @@ function renderFavs(){
           ? `<button class="btn" data-toggle-lang="${it.id}">${showOrig?'中文':'原文'}</button>
              <button class="btn" data-retranslate="${it.id}">重译</button>`
           : `<button class="btn" data-translate="${it.id}">翻译</button>`}
+        <button class="btn faved" data-fav="${it.id}">取消收藏</button>
         <a class="btn primary" href="${it.link}" target="_blank">读原文</a>
       </div></div></div>`;
     }).join('')
