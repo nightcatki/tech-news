@@ -34,6 +34,7 @@ header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(
 .policy-card{background:var(--policy-bg);border:1px solid #92400e55;border-left:3px solid #f59e0b;
   border-radius:10px;padding:12px 14px;margin-bottom:8px}
 .policy-card .p-title{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:6px}
+.policy-card .p-title .orig{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:3px}
 .policy-card .p-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
 .policy-card .p-region{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:8px;
   background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b44}
@@ -105,6 +106,7 @@ nav a.active{color:var(--accent);font-weight:600}
 
 <nav>
   <a href="#" class="active" data-view="feed">今日</a>
+  <a href="#" data-view="policy">政策</a>
   <a href="#" data-view="fav">收藏</a>
   <a href="#" data-view="about">我的</a>
 </nav>
@@ -142,10 +144,14 @@ async function loadDate(date){
 }
 
 function applyCachedTranslations(){
-  if(!state.data || !state.data.items) return;
+  if(!state.data) return;
   const cache = getCache();
-  for(const it of state.data.items){
+  for(const it of state.data.items || []){
     if(cache[it.id]) it.trans = cache[it.id];
+  }
+  for(const p of state.data.policies || []){
+    const id = getPolicyId(p);
+    if(cache[id]) p.trans = cache[id];
   }
 }
 
@@ -191,6 +197,7 @@ function render(){
   $('#nextDay').disabled = state.dateIdx >= state.dates.length - 1;
 
   if(state.view === 'fav') return renderFavs();
+  if(state.view === 'policy') return renderPolicies();
   if(state.view === 'about') return renderAbout();
 
   const boards = d.boards || {};
@@ -199,18 +206,6 @@ function render(){
   const tops = state.tab === 'all' ? d.items.slice(0,3).map(i=>i.id) : [];
 
   let html = `<div class="digest"><span class="tag">AI 晨报</span>${d.digest}</div>`;
-
-  if(d.policies && d.policies.length){
-    html += `<div class="policy-sec"><h2>中国 / 国际政策速递</h2>` +
-      d.policies.map(p=>`
-        <div class="policy-card">
-          <div class="p-title">${p.title}</div>
-          <div class="p-meta">${p.region?`<span class="p-region">${p.region}</span>`:''}${p.source}</div>
-          ${p.what?`<div class="p-row"><b>说什么</b>｜${p.what}</div>`:''}
-          ${p.meaning?`<div class="p-row"><b>意味着什么</b>｜${p.meaning}</div>`:''}
-          <a href="${p.link}" target="_blank">查看原文 →</a>
-        </div>`).join('') + `</div>`;
-  }
 
   html += `<div class="tabs">` + tabs.map(t=>
     `<div class="tab ${state.tab===t?'active':''}" data-tab="${t}">${t==='all'?'全部':boards[t]}</div>`
@@ -256,6 +251,39 @@ function render(){
   bindCards();
 }
 
+function renderPolicies(){
+  const policies = state.data?.policies || [];
+  $('#app').innerHTML = `<div class="policy-sec" style="padding-top:14px">
+    <h2>中国 / 国际政策速递</h2>` +
+    (policies.length ? '' : '<div class="empty">近期暂无政策更新</div>') +
+    policies.map(p=>{
+      const id = getPolicyId(p);
+      const trans = getTranslation(p);
+      const showOrig = !!state.originalView[id];
+      const title = trans && !showOrig ? trans.title_zh : p.title;
+      const what = trans && !showOrig ? trans.what : p.what;
+      const meaning = trans && !showOrig ? trans.meaning : p.meaning;
+      return `
+      <div class="policy-card">
+        <div class="p-title">${title}${trans && !showOrig?`<span class="orig">${p.title}</span>`:''}</div>
+        <div class="p-meta">${p.region?`<span class="p-region">${p.region}</span>`:''}${p.source}</div>
+        ${what?`<div class="p-row"><b>说什么</b>｜${what}</div>`:''}
+        ${meaning?`<div class="p-row"><b>意味着什么</b>｜${meaning}</div>`:''}
+        <div class="c-foot" style="margin-top:10px">
+          <span>${(p.published||'').slice(5,16).replace('T',' ')}</span>
+          <div class="c-actions">
+            ${trans
+              ? `<button class="btn" data-policy-toggle="${id}">${showOrig?'中文':'原文'}</button>
+                 <button class="btn" data-policy-retranslate="${id}">重译</button>`
+              : `<button class="btn" data-policy-translate="${id}">翻译</button>`}
+            <a class="btn primary" href="${p.link}" target="_blank">原文</a>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  bindCards();
+}
+
 function renderFavs(){
   const d = state.data;
   const favItems = (d.items||[]).filter(i=>state.favs.includes(i.id));
@@ -293,7 +321,7 @@ function renderAbout(){
          padding:16px;margin-bottom:18px">
       <div style="font-weight:600;margin-bottom:4px">官方 AI 翻译 Key</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-        选择 DeepSeek 或智谱官方接口，填入 API Key 后，每张新闻卡片底部会出现“翻译”按钮。Key 只保存在当前浏览器本地。
+        选择 DeepSeek 或智谱官方接口，填入 API Key 后，新闻和政策卡片都可以逐条翻译。Key 只保存在当前浏览器本地。
       </div>
       <label style="display:block;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">服务商</label>
       <select id="providerInput" class="field" style="margin-bottom:10px">
@@ -316,7 +344,7 @@ function renderAbout(){
     </div>
 
     <h2 style="font-size:16px;margin-bottom:12px">关于</h2>
-    <p>每天 07:00 自动抓取全球科技一手新闻，<br>每周一加更「上周政策速递」。<br><br>
+    <p>每天早上自动抓取全球科技一手新闻，<br>政策页展示中国 / 国际政策速递。<br><br>
     关注板块：AI 大模型 · 3DGS · 具身智能 · 产品与公司</p>
     <p style="color:var(--muted);font-size:12px;margin-top:16px">
     历史存档 ${state.dates.length} 天 ｜ 数据源均为一手官方渠道</p></div>`;
@@ -354,6 +382,15 @@ const getApiKey = ()=> localStorage.getItem('ai_key') || '';
 const getCache = ()=> JSON.parse(localStorage.getItem('trans_cache')||'{}');
 const setCache = c => localStorage.setItem('trans_cache', JSON.stringify(c));
 const getTranslation = it => it.trans || null;
+const getPolicyId = p => 'policy_' + hashText(p.link || p.title || '');
+
+function hashText(text){
+  let hash = 0;
+  for(let i=0;i<text.length;i++){
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 async function aiChat(prompt){
   const provider = PROVIDERS[getProvider()] || PROVIDERS.deepseek;
@@ -388,6 +425,17 @@ function translatePrompt(it){
 标题：${it.title}
 来源：${it.source}
 摘要：${(it.summary_raw||it.summary||'').slice(0,800)}`;
+}
+
+function policyTranslatePrompt(p){
+  return `你是科技政策编辑。处理下面这条政策，输出严格 JSON（不要 markdown 代码块）：
+{"title_zh":"中文标题（如原文已是中文则原样保留）","what":"120字以内中文说明：政策说了什么","meaning":"150字以内中文说明：对AI、数据、算力、芯片、网络安全或科技产业意味着什么"}
+
+地区：${p.region || ''}
+来源：${p.source || ''}
+标题：${p.title || ''}
+说什么：${p.what || ''}
+意味着什么：${p.meaning || ''}`;
 }
 
 async function translateOne(id, button, force=false){
@@ -431,6 +479,51 @@ async function translateOne(id, button, force=false){
     if(button){
       button.disabled = false;
       button.textContent = '翻译';
+    }
+    showToast('翻译失败：' + friendlyError(e));
+  }
+}
+
+async function translatePolicy(id, button, force=false){
+  if(!state.data) return;
+  const p = (state.data.policies || []).find(x=>getPolicyId(x)===id);
+  if(!p) return;
+  const cache = getCache();
+  if(cache[id] && !force){
+    p.trans = cache[id];
+    state.originalView[id] = false;
+    render();
+    showToast('已使用本地缓存翻译');
+    return;
+  }
+  if(force){
+    delete cache[id];
+    delete p.trans;
+    setCache(cache);
+  }
+  try{
+    if(button){
+      button.disabled = true;
+      button.textContent = force ? '重译中' : '翻译中';
+    }
+    showToast(`正在调用 ${PROVIDERS[getProvider()]?.name || 'AI'} 翻译…`);
+    const resp = await aiChat(policyTranslatePrompt(p));
+    const parsed = extractJson(resp);
+    if(!parsed) throw new Error('模型没有返回 JSON');
+    cache[id] = {
+      title_zh: parsed.title_zh || p.title,
+      what: parsed.what || p.what || '',
+      meaning: parsed.meaning || p.meaning || ''
+    };
+    setCache(cache);
+    p.trans = cache[id];
+    state.originalView[id] = false;
+    render();
+    showToast('翻译完成');
+  }catch(e){
+    if(button){
+      button.disabled = false;
+      button.textContent = force ? '重译' : '翻译';
     }
     showToast('翻译失败：' + friendlyError(e));
   }
@@ -485,6 +578,15 @@ function bindCards(){
   });
   document.querySelectorAll('[data-toggle-lang]').forEach(b=>b.onclick = ()=>{
     toggleLanguage(b.dataset.toggleLang);
+  });
+  document.querySelectorAll('[data-policy-translate]').forEach(b=>b.onclick = ()=>{
+    translatePolicy(b.dataset.policyTranslate, b);
+  });
+  document.querySelectorAll('[data-policy-retranslate]').forEach(b=>b.onclick = ()=>{
+    translatePolicy(b.dataset.policyRetranslate, b, true);
+  });
+  document.querySelectorAll('[data-policy-toggle]').forEach(b=>b.onclick = ()=>{
+    toggleLanguage(b.dataset.policyToggle);
   });
 }
 
